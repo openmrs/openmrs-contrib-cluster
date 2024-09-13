@@ -15,7 +15,7 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 0.1.0
+version: 0.1.1
 
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
@@ -25,8 +25,8 @@ appVersion: "3.1.0"
 
 dependencies:
   - name: openmrs-backend
-    version: 0.1.0
-    repository: "file://../openmrs-backend" # "oci://registry-1.docker.io/openmrs"
+    version: 0.1.1
+    repository: "oci://registry-1.docker.io/openmrs" #"file://../openmrs-backend"
   - name: openmrs-frontend
     version: 0.1.0
     repository: "oci://registry-1.docker.io/openmrs"
