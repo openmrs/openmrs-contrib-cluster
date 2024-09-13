@@ -1,5 +1,5 @@
 resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.bahmni-vpc.id
+  vpc_id = aws_vpc.openmrs-vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
@@ -7,32 +7,32 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name  = "bahmni-rt-public-${var.vpc_suffix}"
+    Name  = "openmrs-rt-public-${var.vpc_suffix}"
     owner = var.owner
   }
 }
 resource "aws_route_table" "private_a" {
-  vpc_id = aws_vpc.bahmni-vpc.id
+  vpc_id = aws_vpc.openmrs-vpc.id
 
   route {
     cidr_block     = "0.0.0.0/0"
     nat_gateway_id = aws_nat_gateway.nat_az_a.id
   }
   tags = {
-    Name  = "bahmni-rt-private-a-${var.vpc_suffix}"
+    Name  = "openmrs-rt-private-a-${var.vpc_suffix}"
     owner = var.owner
   }
 }
 
 resource "aws_route_table" "private_b" {
-  vpc_id = aws_vpc.bahmni-vpc.id
+  vpc_id = aws_vpc.openmrs-vpc.id
 
   route {
     cidr_block     = "0.0.0.0/0"
     nat_gateway_id = aws_nat_gateway.nat_az_b.id
   }
   tags = {
-    Name  = "bahmni-rt-private-b-${var.vpc_suffix}"
+    Name  = "openmrs-rt-private-b-${var.vpc_suffix}"
     owner = var.owner
   }
 }

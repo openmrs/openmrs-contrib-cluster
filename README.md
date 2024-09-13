@@ -1,7 +1,7 @@
 # openmrs-contrib-cluster
 Contains terraform and helm charts to deploy OpenMRS distro in a cluster.
 
-Terraform setup is borrowed from Bahmni https://github.com/Bahmni/bahmni-infra (please see the terraform directory). It has been further adjusted for general use in other OpenMRS distributions.
+Terraform setup is borrowed from OpenMRS https://github.com/OpenMRS/openmrs-infra (please see the terraform directory). It has been further adjusted for general use in other OpenMRS distributions.
 
 ## Overview
 

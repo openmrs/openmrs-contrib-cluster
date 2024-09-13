@@ -1,7 +1,7 @@
 resource "aws_security_group" "bastion" {
-  name        = "bahmni-bastion-sg-${var.vpc_suffix}"
-  description = "SG for Bahmni Bastion Host"
-  vpc_id      = data.aws_vpc.bahmni-vpc.id
+  name        = "openmrs-bastion-sg-${var.vpc_suffix}"
+  description = "SG for OpenMRS Bastion Host"
+  vpc_id      = data.aws_vpc.openmrs-vpc.id
   ingress {
     from_port   = 22
     to_port     = 22
@@ -17,6 +17,6 @@ resource "aws_security_group" "bastion" {
     description = "Rule to allow EC2 to connect to Internet"
   }
   tags = {
-    Name = "bahmni-bastion-sg-${var.vpc_suffix}"
+    Name = "openmrs-bastion-sg-${var.vpc_suffix}"
   }
 }

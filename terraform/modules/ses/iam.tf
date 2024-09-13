@@ -1,5 +1,5 @@
 resource "aws_iam_user" "ses_user" {
-  name = "bahmni-ses-user"
+  name = "openmrs-ses-user"
 }
 
 resource "aws_iam_policy" "ses_send_email_access" {

@@ -7,17 +7,17 @@ data "aws_ami" "amazon_linux_2" {
   owners = ["amazon"]
 }
 
-data "aws_vpc" "bahmni-vpc" {
+data "aws_vpc" "openmrs-vpc" {
   filter {
     name   = "tag:Name"
-    values = ["bahmni-vpc-${var.vpc_suffix}"]
+    values = ["openmrs-vpc-${var.vpc_suffix}"]
   }
 }
 
 data "aws_subnets" "public_subnets" {
   filter {
     name   = "vpc-id"
-    values = [data.aws_vpc.bahmni-vpc.id]
+    values = [data.aws_vpc.openmrs-vpc.id]
   }
   filter {
     name   = "tag:Subnet-Type"

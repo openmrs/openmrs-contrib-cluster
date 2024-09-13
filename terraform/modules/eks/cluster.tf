@@ -1,5 +1,5 @@
-resource "aws_eks_cluster" "bahmni-cluster" {
-  name                      = "bahmni-cluster-${var.environment}"
+resource "aws_eks_cluster" "openmrs-cluster" {
+  name                      = "openmrs-cluster-${var.environment}"
   role_arn                  = aws_iam_role.cluster-role.arn
   enabled_cluster_log_types = ["api", "authenticator", "audit", "scheduler", "controllerManager"]
   vpc_config {

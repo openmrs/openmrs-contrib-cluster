@@ -15,7 +15,7 @@ resource "aws_instance" "bastion" {
   }
 
   tags = {
-    Name = "Bahmni Bastion - ${var.vpc_suffix} VPC"
+    Name = "OpenMRS Bastion - ${var.vpc_suffix} VPC"
   }
 }
 

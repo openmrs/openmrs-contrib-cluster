@@ -3,12 +3,12 @@ resource "aws_db_subnet_group" "mysql-subnet" {
   subnet_ids = data.aws_subnets.private_subnets.ids
 
   tags = {
-    Name = "Bahmni MySQL DB Subnet for ${var.environment}"
+    Name = "OpenMRS MySQL DB Subnet for ${var.environment}"
   }
 }
 
 resource "aws_db_instance" "mysql" {
-  identifier                  = "bahmni-rds-${var.environment}"
+  identifier                  = "openmrs-rds-${var.environment}"
   allocated_storage           = 10
   max_allocated_storage       = 30
   skip_final_snapshot         = true

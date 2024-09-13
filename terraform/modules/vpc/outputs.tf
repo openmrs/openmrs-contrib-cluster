@@ -1,5 +1,5 @@
 output "vpc_id" {
-  value = aws_vpc.bahmni-vpc.id
+  value = aws_vpc.openmrs-vpc.id
 }
 
 output "vpc_public_subnets" {
