@@ -26,7 +26,7 @@ appVersion: "3.1.0"
 dependencies:
   - name: openmrs-backend
     version: 0.1.0
-    repository: "oci://registry-1.docker.io/openmrs"
+    repository: "file://../openmrs-backend" # "oci://registry-1.docker.io/openmrs"
   - name: openmrs-frontend
     version: 0.1.0
     repository: "oci://registry-1.docker.io/openmrs"
