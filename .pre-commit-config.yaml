@@ -3,6 +3,7 @@ repos:
     rev: v0.1.17
     hooks:
       - id: terraform-fmt
+      - id: helmlint
   - repo: local
     hooks:
       - id: terrascan
