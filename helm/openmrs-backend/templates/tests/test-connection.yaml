@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "openmrs-backend.fullname" . }}-test-connection"
+  labels:
+    {{- include "openmrs-backend.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "openmrs-backend.fullname" . }}:{{ .Values.service.port }}']
+  restartPolicy: Never

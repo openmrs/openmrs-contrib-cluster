@@ -1,6 +1,12 @@
 dependencies:
-- name: mariadb
-  repository: https://charts.bitnami.com/bitnami
-  version: 19.0.5
-digest: sha256:e0f459d10fcea8726475205ec4508c57f65ab02365be2d2369ba325dd44408d4
-generated: "2024-08-27T16:08:13.588347+02:00"
+- name: openmrs-backend
+  repository: oci://registry-1.docker.io/openmrs
+  version: 0.1.0
+- name: openmrs-frontend
+  repository: oci://registry-1.docker.io/openmrs
+  version: 0.1.0
+- name: openmrs-gateway
+  repository: oci://registry-1.docker.io/openmrs
+  version: 0.1.0
+digest: sha256:7fe54d42e2f745dc3ba9ff0b8a2589ab6362881e1e7258f0c1ab82466d101e80
+generated: "2024-09-13T10:47:59.514552+02:00"
