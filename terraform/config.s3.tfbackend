@@ -1,0 +1,3 @@
+bucket         = "bahmni-tf-bucket"
+dynamodb_table = "bahmni-tf-lock"
+region         = "ap-south-1"

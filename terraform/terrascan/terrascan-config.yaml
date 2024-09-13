@@ -1,0 +1,3 @@
+rules:
+  skip-rules:
+    - AC_AWS_0480   # Skips validation of detailed monitoring for EC2 Instances

@@ -1,0 +1,19 @@
+repos:
+  - repo: https://github.com/gruntwork-io/pre-commit
+    rev: v0.1.17
+    hooks:
+      - id: terraform-fmt
+  - repo: local
+    hooks:
+      - id: terrascan
+        name: Terrascan
+        language: script
+        entry : ./terraform/terrascan/terrascan.sh
+      - id: tflint
+        name: TFLint
+        language: script
+        entry: ./terraform/tflint/tflint.sh
+      - id: tfsec
+        name: TFSec
+        language: script
+        entry: ./terraform/tfsec/tfsec.sh

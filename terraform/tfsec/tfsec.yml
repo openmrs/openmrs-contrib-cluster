@@ -1,0 +1,9 @@
+exclude:
+  - aws-eks-no-public-cluster-access          # Cluster Public access for deploying from Github CI
+  - aws-eks-no-public-cluster-access-to-cidr  # Cluster Public access for deploying from Github CI
+  - aws-eks-encrypt-secrets                   # Secret Encryption
+  - aws-rds-enable-performance-insights       # Performance insights are optional and costs additionaly
+  - aws-vpc-no-public-egress-sgr              # External access by instances to the internet
+  - aws-vpc-no-public-ingress-sgr             # Public access from anywhere to bastion host
+  - aws-iam-enforce-mfa
+  - aws-ec2-no-public-ip-subnet                  # Subnet associates public IP address
