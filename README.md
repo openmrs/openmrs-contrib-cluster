@@ -19,9 +19,11 @@ What's coming next?
 
 See https://openmrs.atlassian.net/wiki/x/tgBLCw for more details.
 
-## Helm Development Setup
+## Usage
 
-We recommend https://kind.sigs.k8s.io/ for local development.
+### Helm
+
+We recommend https://kind.sigs.k8s.io/ for local testing.
 
 How to try it out?
 
@@ -29,37 +31,54 @@ How to try it out?
 
 Once installed you will see instructions on how to configure port-forwarding and access the instance. If you deploy to a cloud provider you will need to configure a load balancer / gateway to point to openmrs-gateway service on port 80.
 
-## Terraform Development Setup
+### Terraform and AWS
 
-### Setting up terraform and AWS
+#### Setting up terraform and AWS
 
 1. Install [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
+
+
+      brew install tfenv 
+      tfenv install 1.9.5
+
+
 2. Install [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
-   `aws configure`
+
+      brew install awscli
+      aws configure
+
+
+#### Running Terraform
+
+To be documented...
+
+## Development Setup
 
 ### Setting up pre-commit hooks
 
 This is a one-time setup that needs to be run only when the repo is cloned.
 1. Install [pre-commit](https://pre-commit.com/#install)
 
-    `brew install pre-commit` or `pip install pre-commit`
+
+      brew install pre-commit
+
 
 2. Install pre-commit dependencies
 
     - [terrascan](https://github.com/accurics/terrascan)
-   
-      `brew install terrascan`
-    - [tfsec](https://github.com/aquasecurity/tfsec#installation) 
-      
-      `brew install tfsec`
+    - [tfsec](https://github.com/aquasecurity/tfsec#installation)
     - [tflint](https://github.com/terraform-linters/tflint#installation)
    
-      `brew install tflint`
+
+      brew install terrascan tfsec tflint
+
 
 3. Initialise pre-commit hooks
 
-   `pre-commit install --install-hooks`
+
+      pre-commit install --install-hooks
+
 
 Now before every commit, the hooks will be executed.
 
