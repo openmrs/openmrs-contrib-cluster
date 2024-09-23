@@ -89,7 +89,12 @@ The terraform needs to be run in 2 steps. One is for deploying the cluster and s
 
 3. Run helm
 
-To be documented...
+
+      aws eks update-kubeconfig --name openmrs-cluster-nonprod
+      helm install openmrs oci://registry-1.docker.io/openmrs/openmrs
+
+
+TODO: Add automated setup for creating PersistentVolume using EFS.
 
 ## Development Setup
 
