@@ -65,11 +65,13 @@ variable "bastion_public_access_cidr" {
 
 variable "domain_name" {
   type        = string
+  default     = ""
   description = "Domain Name for Amazon SES service"
 }
 
 variable "hosted_zone_id" {
   type        = string
+  default     = ""
   description = "Route 53 Hosted Zone ID for the domain_name"
 }
 

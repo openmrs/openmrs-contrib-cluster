@@ -4,7 +4,7 @@ resource "aws_instance" "bastion" {
   vpc_security_group_ids      = [aws_security_group.bastion.id]
   associate_public_ip_address = true
   subnet_id                   = data.aws_subnets.public_subnets.ids[0]
-  user_data                   = data.template_file.user_data_bastion.rendered
+  user_data                   = templatefile("${path.module}/user_data.tpl", {})
   metadata_options {
     http_tokens   = "required"
     http_endpoint = "enabled"

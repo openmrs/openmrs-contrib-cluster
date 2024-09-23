@@ -24,7 +24,3 @@ data "aws_subnets" "public_subnets" {
     values = ["public-${var.vpc_suffix}"]
   }
 }
-
-data "template_file" "user_data_bastion" {
-  template = file("${path.module}/user_data.tpl")
-}
