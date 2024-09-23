@@ -56,10 +56,18 @@ Once installed you will see instructions on how to configure port-forwarding and
       aws configure
 
 
+#### Initialize Terraform backend (one time operation)
+
+To Initialize terraform backend run:
+
+
+      cd terraform-backend
+      terraform init
+      terraform apply
+
 #### Running Terraform
 
 
-To be documented...
 
 ## Development Setup
 
