@@ -1,5 +1,9 @@
+locals {
+  region = "us-east-2"
+}
+
 provider "aws" {
-  region = "ap-south-1"
+  region = local.region
 }
 
 terraform {

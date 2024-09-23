@@ -1,6 +1,6 @@
 ## IAM Roles and policies for Node
 resource "aws_iam_role" "node-role" {
-  name = "BahmniEKSNodeRole-${var.environment}"
+  name = "OpenMRSEKSNodeRole-${var.environment}"
 
   assume_role_policy = jsonencode({
     Statement = [{
@@ -19,7 +19,7 @@ resource "aws_iam_role" "node-role" {
   }
 
   tags = {
-    Name  = "BahmniEKSNodeRole-${var.environment}"
+    Name  = "OpenMRSEKSNodeRole-${var.environment}"
     owner = var.owner
   }
 }
@@ -42,7 +42,7 @@ resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryReadOn
 ## IAM Roles and policies for Cluster
 
 resource "aws_iam_role" "cluster-role" {
-  name = "BahmniEKSClusterRole-${var.environment}"
+  name = "OpenMRSEKSClusterRole-${var.environment}"
 
   assume_role_policy = <<POLICY
 {
@@ -59,7 +59,7 @@ resource "aws_iam_role" "cluster-role" {
 }
 POLICY
   tags = {
-    Name  = "BahmniEKSClusterRole-${var.environment}"
+    Name  = "OpenMRSEKSClusterRole-${var.environment}"
     owner = var.owner
   }
 }
