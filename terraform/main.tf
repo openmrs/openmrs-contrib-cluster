@@ -17,9 +17,13 @@ terraform {
   }
 
   backend "s3" {
+    bucket         = "openmrs-terraform-global"
+    key            = "global/s3/terraform.tfstate"
+    region         = "us-east-2"
+    dynamodb_table = "openmrs-terraform-global-locks"
+    encrypt        = true
   }
 }
-
 
 module "vpc" {
   source              = "./modules/vpc"

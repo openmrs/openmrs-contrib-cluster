@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "ap-south-1"
+  region = "us-east-2"
 }
 
 terraform {
@@ -13,7 +13,11 @@ terraform {
   }
 
   backend "s3" {
-    key = "nodegroup/nonprod/terraform.tfstate"
+    bucket         = "openmrs-terraform-global"
+    key            = "nodegroup/nonprod/terraform.tfstate"
+    region         = "us-east-2"
+    dynamodb_table = "openmrs-terraform-global-locks"
+    encrypt        = true
   }
 }
 

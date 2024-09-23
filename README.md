@@ -67,6 +67,23 @@ To Initialize terraform backend run:
 
 #### Running Terraform
 
+The terraform needs to be run in 2 steps. One is for deploying the cluster and supporting services and the other is for deploying the cluster nodes.
+
+1. Deploy the cluster and supporting services
+
+
+      cd terraform/
+      terraform init
+      terraform apply -var-file=nonprod.tfvars
+
+
+2. Deploy the nodes
+
+
+      cd terraform/node_groups/nonprod
+      terraform init
+      terraform apply
+
 
 
 ## Development Setup
