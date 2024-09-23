@@ -64,6 +64,7 @@ To Initialize terraform backend run:
       cd terraform-backend
       terraform init
       terraform apply
+      cd ..
 
 #### Running Terraform
 
@@ -75,6 +76,7 @@ The terraform needs to be run in 2 steps. One is for deploying the cluster and s
       cd terraform/
       terraform init
       terraform apply -var-file=nonprod.tfvars
+      cd ..
 
 
 2. Deploy the nodes
@@ -85,6 +87,9 @@ The terraform needs to be run in 2 steps. One is for deploying the cluster and s
       terraform apply
 
 
+3. Run helm
+
+To be documented...
 
 ## Development Setup
 
