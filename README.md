@@ -1,7 +1,7 @@
 # openmrs-contrib-cluster
 Contains terraform and helm charts to deploy OpenMRS distro in a cluster.
 
-Terraform setup is borrowed from OpenMRS https://github.com/OpenMRS/openmrs-infra (please see the terraform directory). It has been further adjusted for general use in other OpenMRS distributions.
+Terraform setup is borrowed from Bahmni https://github.com/Bahmni/bahmni-infra (please see the terraform directory). It has been further adjusted for general use in other OpenMRS distributions.
 
 ## Overview
 
@@ -25,9 +25,16 @@ See https://openmrs.atlassian.net/wiki/x/tgBLCw for more details.
 
 We recommend https://kind.sigs.k8s.io/ for local testing.
 
+
+      brew install kind
+      kind create cluster
+
+
 How to try it out?
 
-``` helm install openmrs oci://registry-1.docker.io/openmrs/openmrs```
+
+      helm install openmrs oci://registry-1.docker.io/openmrs/openmrs
+
 
 Once installed you will see instructions on how to configure port-forwarding and access the instance. If you deploy to a cloud provider you will need to configure a load balancer / gateway to point to openmrs-gateway service on port 80.
 
@@ -50,6 +57,7 @@ Once installed you will see instructions on how to configure port-forwarding and
 
 
 #### Running Terraform
+
 
 To be documented...
 
