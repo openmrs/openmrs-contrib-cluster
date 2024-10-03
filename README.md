@@ -25,6 +25,8 @@ See https://openmrs.atlassian.net/wiki/x/tgBLCw for more details.
 
 We recommend https://kind.sigs.k8s.io/ for local testing.
 
+Make sure that Docker is running and issue the following command:
+
 
       brew install kind
       kind create cluster
