@@ -70,33 +70,20 @@ To Initialize terraform backend run:
 
 #### Running Terraform
 
-The terraform needs to be run in 2 steps. One is for deploying the cluster and supporting services and the other is for deploying the cluster nodes.
-
 1. Deploy the cluster and supporting services
 
 
       cd terraform/
       terraform init
       terraform apply -var-file=nonprod.tfvars
-      cd ..
 
 
-2. Deploy the nodes
-
-
-      cd terraform/node_groups/nonprod
-      terraform init
-      terraform apply
-
-
-3. Run helm
+2. Run helm
 
 
       aws eks update-kubeconfig --name openmrs-cluster-nonprod
       helm install openmrs oci://registry-1.docker.io/openmrs/openmrs
 
-
-TODO: Add automated setup for creating PersistentVolume using EFS.
 
 ## Development Setup
 

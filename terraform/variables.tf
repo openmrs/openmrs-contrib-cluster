@@ -38,6 +38,12 @@ variable "mysql_version" {
   description = "MySQL Version for RDS instance"
 }
 
+variable "enable_rds" {
+  type        = bool
+  default     = true
+  description = "Toggle for RDS Module"
+}
+
 variable "rds_instance_class" {
   type        = string
   description = "Instance class for RDS Instance"
@@ -90,4 +96,24 @@ variable "rds_allow_major_version_upgrade" {
 variable "eks_version" {
   type        = string
   description = "EKS Cluster Version"
+}
+
+variable "eks_node_instance_type" {
+  type        = string
+  description = "EKS Node Instance Type"
+}
+
+variable "eks_desired_num_of_nodes" {
+  type        = number
+  description = "Desired Capacity for EKS Node Group"
+}
+
+variable "eks_min_num_of_nodes" {
+  type        = number
+  description = "Number of minimum nodes in the default node group"
+}
+
+variable "eks_max_num_of_nodes" {
+  type        = number
+  description = "Number of maximum nodes in the default node group"
 }

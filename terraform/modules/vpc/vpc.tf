@@ -19,7 +19,7 @@ resource "aws_internet_gateway" "igw" {
 }
 
 resource "aws_eip" "nat_eip_az_a" {
-  vpc        = true
+  domain     = "vpc"
   depends_on = [aws_internet_gateway.igw]
   tags = {
     Name  = "openmrs-nat-eip-az-a-${var.vpc_suffix}"
@@ -28,7 +28,7 @@ resource "aws_eip" "nat_eip_az_a" {
 }
 
 resource "aws_eip" "nat_eip_az_b" {
-  vpc        = true
+  domain     = "vpc"
   depends_on = [aws_internet_gateway.igw]
   tags = {
     Name  = "openmrs-nat-eip-az-b-${var.vpc_suffix}"

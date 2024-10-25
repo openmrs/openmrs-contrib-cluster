@@ -20,7 +20,3 @@ run_scan(){
 }
 
 run_scan terraform/ nonprod.tfvars
-for folder in terraform/node_groups/*
-do
-    run_scan $folder terraform.tfvars
-done;

@@ -11,6 +11,7 @@ terraform {
 
   required_providers {
     aws = ">= 5.0.1, < 5.1"
+    tls = "4.0.6"
   }
 
   backend "s3" {
@@ -32,26 +33,22 @@ module "vpc" {
   vpc_cidr_block      = var.vpc_cidr_block
 }
 
-module "efs" {
-  source              = "./modules/efs"
-  depends_on          = [module.vpc]
-  environment         = var.environment
-  vpc_suffix          = var.vpc_suffix
-  private_cidr_blocks = var.private_cidr_blocks
-}
-
 module "eks" {
-  source              = "./modules/eks"
-  depends_on          = [module.vpc]
-  environment         = var.environment
-  owner               = var.owner
-  vpc_suffix          = var.vpc_suffix
-  efs_file_system_arn = module.efs.efs-file-system-arn
-  eks_version         = var.eks_version
+  source               = "./modules/eks"
+  depends_on           = [module.vpc]
+  environment          = var.environment
+  owner                = var.owner
+  vpc_suffix           = var.vpc_suffix
+  eks_version          = var.eks_version
+  node_instance_type   = var.eks_node_instance_type
+  desired_num_of_nodes = var.eks_desired_num_of_nodes
+  min_num_of_nodes     = var.eks_min_num_of_nodes
+  max_num_of_nodes     = var.eks_max_num_of_nodes
 }
 
 module "rds" {
   source                          = "./modules/rds"
+  count                           = var.enable_rds ? 1 : 0
   depends_on                      = [module.vpc]
   environment                     = var.environment
   vpc_suffix                      = var.vpc_suffix
