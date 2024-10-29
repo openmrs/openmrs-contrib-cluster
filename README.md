@@ -68,7 +68,8 @@ To Initialize terraform backend run:
       terraform apply
       cd ..
 
-#### Running Terraform
+#### Running Terraform (AWS only)
+
 
 1. Deploy the cluster and supporting services
 
