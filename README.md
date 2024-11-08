@@ -40,6 +40,38 @@ How to try it out?
 
 Once installed you will see instructions on how to configure port-forwarding and access the instance. If you deploy to a cloud provider you will need to configure a load balancer / gateway to point to openmrs-gateway service on port 80.
 
+#### Parameters
+
+##### Global parameters
+
+| Name                      | Description                                                                             | Value   |
+| ------------------------- |-----------------------------------------------------------------------------------------|---------|
+| `defaultStorageClass`     | Global default StorageClass for Persistent Volume(s)                                    | `"gp2"` |
+
+#### Common parameters
+
+Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `openrms-gateway`, `mariadb`.
+
+| Name                | Description                  | Default Value                                            |
+|---------------------|------------------------------|----------------------------------------------------------|
+| `.image.repository` | Image to use for the service | `e.g. "openmrs/openmrs-reference-application-3-backend"` |
+| `.image.tag`        | Tag to use for the service   | `e.g. "3.0.0"`                                           |
+
+
+#### OpenMRS-backend parameters
+
+| Name                                        | Description                                                              | Default Value       |
+|---------------------------------------------|--------------------------------------------------------------------------|---------------------|
+| `openmrs-backend.db.hostname`               | Hostname for OpenMRS DB                                                  | `"mariadb-primary"` |
+| `openmrs-backend.persistance.size`          | Size of persistent volume to claim (for search index, attachments, etc.) | `"8Gi"`             |
+| `openmrs-backend.mariadb.enabled`           | Create MariaDB with read-only replica                                    | `"true"`            |
+| `openmrs-backend.mariadb.auth.rootPassword` | Password for the `root` user. Ignored if existing secret is provided.    | `"true"`            |
+| `openmrs-backend.mariadb.auth.database`     | Name for an OpenMRS database                                             | `"openmrs"`         |
+| `openmrs-backend.mariadb.auth.username`     | Name for a DB user                                                       | `"openmrs"`         |
+| `openmrs-backend.mariadb.auth.password`     | Name for a DB user's password                                            | `"OpenMRS123"`      |
+
+See [MariaDB](https://github.com/bitnami/charts/blob/main/bitnami/mariadb/README.md) helm chart for other MariaDB parameters.
+
 ### Terraform and AWS
 
 #### Setting up terraform and AWS
