@@ -34,8 +34,13 @@ Make sure that Docker is running and issue the following command:
 
 How to try it out?
 
+From local source:
 
-      helm install openmrs oci://registry-1.docker.io/openmrs/openmrs
+      helm install --set global.defaultStorageClass=standard openmrs .
+
+or from registry:
+
+      helm install --set global.defaultStorageClass=standard openmrs oci://registry-1.docker.io/openmrs/openmrs
 
 
 Once installed you will see instructions on how to configure port-forwarding and access the instance. If you deploy to a cloud provider you will need to configure a load balancer / gateway to point to openmrs-gateway service on port 80.

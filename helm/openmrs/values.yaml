@@ -16,6 +16,15 @@ openmrs-backend:
   db:
     hostname: mariadb-primary
 
+  galera:
+    enabled: false
+    rootUser:
+      password: Root123
+    db:
+      name: openmrs
+      user: openmrs
+      password: OpenMRS123
+
   mariadb:
     enabled: true
     auth:

@@ -6,4 +6,10 @@ metadata:
     {{- include "openmrs-backend.labels" . | nindent 4 }}
 data:
   OMRS_DB_HOSTNAME: {{ .Values.db.hostname | quote}}
+  {{- if .Values.mariadb.enabled }}
   OMRS_DB_NAME: {{ .Values.mariadb.auth.database | quote }}
+  {{- end }}
+  {{- if .Values.galera.enabled }}
+  OMRS_DB_NAME: {{ .Values.galera.db.name | quote }}
+  {{- end }}
+

@@ -16,6 +16,16 @@ image:
 db:
   hostname: mariadb
 
+galera:
+  enabled: false
+  rootUser:
+    password: Root123
+  db:
+    name: openmrs
+    user: openmrs
+    password: OpenMRS123
+  fullnameOverride: mariadb
+
 mariadb:
   architecture: replication
   enabled: true
