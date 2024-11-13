@@ -32,5 +32,4 @@ openmrs-backend:
       database: openmrs
       username: openmrs
       password: OpenMRS123
-    fullnameOverride: mariadb
 

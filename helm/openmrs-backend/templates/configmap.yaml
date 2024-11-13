@@ -5,11 +5,15 @@ metadata:
   labels:
     {{- include "openmrs-backend.labels" . | nindent 4 }}
 data:
+  {{- if and (not .Values.mariadb.enabled) (not .Values.galera.enabled) }}
   OMRS_DB_HOSTNAME: {{ .Values.db.hostname | quote}}
+  {{- end }}
   {{- if .Values.mariadb.enabled }}
   OMRS_DB_NAME: {{ .Values.mariadb.auth.database | quote }}
+  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb-primary"
   {{- end }}
   {{- if .Values.galera.enabled }}
   OMRS_DB_NAME: {{ .Values.galera.db.name | quote }}
+  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb-galera"
   {{- end }}
 

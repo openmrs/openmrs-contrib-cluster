@@ -24,7 +24,6 @@ galera:
     name: openmrs
     user: openmrs
     password: OpenMRS123
-  fullnameOverride: mariadb
 
 mariadb:
   architecture: replication
@@ -45,7 +44,6 @@ mariadb:
     persistence:
       enabled: true
       size: 8Gi
-  fullnameOverride: mariadb
 
 imagePullSecrets: []
 nameOverride: ""
