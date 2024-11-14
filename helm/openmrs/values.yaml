@@ -14,7 +14,7 @@ service:
 
 openmrs-backend:
   db:
-    hostname: mariadb-primary
+    hostname: ""
 
   galera:
     enabled: false

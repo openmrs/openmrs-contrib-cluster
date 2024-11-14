@@ -29,7 +29,8 @@ Make sure that Docker is running and issue the following command:
 
 
       brew install kind
-      kind create cluster
+      cd helm
+      kind create cluster --config=kind-config.yaml
 
 
 How to try it out?
@@ -59,7 +60,7 @@ Once installed you will see instructions on how to configure port-forwarding and
 
 #### Common parameters
 
-Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `openrms-gateway`, `mariadb`.
+Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `openrms-gateway`, `openmrs-backend.mariadb`, `openmrs-backend.galera`.
 
 | Name                | Description                  | Default Value                                            |
 |---------------------|------------------------------|----------------------------------------------------------|
@@ -69,15 +70,20 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `op
 
 #### OpenMRS-backend parameters
 
-| Name                                        | Description                                                              | Default Value       |
-|---------------------------------------------|--------------------------------------------------------------------------|---------------------|
-| `openmrs-backend.db.hostname`               | Hostname for OpenMRS DB                                                  | `"mariadb-primary"` |
-| `openmrs-backend.persistance.size`          | Size of persistent volume to claim (for search index, attachments, etc.) | `"8Gi"`             |
-| `openmrs-backend.mariadb.enabled`           | Create MariaDB with read-only replica                                    | `"true"`            |
-| `openmrs-backend.mariadb.auth.rootPassword` | Password for the `root` user. Ignored if existing secret is provided.    | `"true"`            |
-| `openmrs-backend.mariadb.auth.database`     | Name for an OpenMRS database                                             | `"openmrs"`         |
-| `openmrs-backend.mariadb.auth.username`     | Name for a DB user                                                       | `"openmrs"`         |
-| `openmrs-backend.mariadb.auth.password`     | Name for a DB user's password                                            | `"OpenMRS123"`      |
+| Name                                    | Description                                                              | Default Value  |
+|-----------------------------------------|--------------------------------------------------------------------------|----------------|
+| `openmrs-backend.db.hostname`           | Hostname for OpenMRS DB                                                  | `""` or defaults to galera or mariadb hostname if enabled       |
+| `openmrs-backend.persistance.size`      | Size of persistent volume to claim (for search index, attachments, etc.) | `"8Gi"`        |
+| `openmrs-backend.mariadb.enabled`       | Create MariaDB with read-only replica                                    | `"true"`       |
+| `openmrs-backend.mariadb.auth.rootPassword` | Password for the `root` user. Ignored if existing secret is provided.    | `"true"`       |
+| `openmrs-backend.mariadb.auth.database` | Name for an OpenMRS database                                             | `"openmrs"`    |
+| `openmrs-backend.mariadb.auth.username` | Name for a DB user                                                       | `"openmrs"`    |
+| `openmrs-backend.mariadb.auth.password` | Name for a DB user's password                                            | `"OpenMRS123"` |
+| `openmrs-backend.galera.enabled`        | Create MariaDB Galera cluster with 3 nodes (default)                     | `"true"`       |
+| `openmrs-backend.galera.rootUser.password` | Password for the `root` user. Ignored if existing secret is provided.    | `"true"`       |
+| `openmrs-backend.galera.db.name`        | Name for an OpenMRS database                                             | `"openmrs"`    |
+| `openmrs-backend.galera.db.user`        | Name for a DB user                                                       | `"openmrs"`    |
+| `openmrs-backend.galera.db.password`    | Name for a DB user's password                                            | `"OpenMRS123"` |
 
 See [MariaDB](https://github.com/bitnami/charts/blob/main/bitnami/mariadb/README.md) helm chart for other MariaDB parameters.
 
