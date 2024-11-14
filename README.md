@@ -45,7 +45,7 @@ or from registry:
 
 or if you want to use mariadb-galera cluster instead of mariadb with basic primary-secondary replication:
 
-      helm install --set global.defaultStorageClass=standard --set openmrs-backend.mariadb.enabled=false --set openmrs-backend.galera.enabled=false openmrs oci://registry-1.docker.io/openmrs/openmrs
+      helm install --set global.defaultStorageClass=standard --set openmrs-backend.mariadb.enabled=false --set openmrs-backend.galera.enabled=true openmrs oci://registry-1.docker.io/openmrs/openmrs
 
 
 Once installed you will see instructions on how to configure port-forwarding and access the instance. If you deploy to a cloud provider you will need to configure a load balancer / gateway to point to openmrs-gateway service on port 80.
