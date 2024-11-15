@@ -14,6 +14,6 @@ data:
   {{- end }}
   {{- if .Values.galera.enabled }}
   OMRS_DB_NAME: {{ .Values.galera.db.name | quote }}
-  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb-galera"
+  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-galera"
   {{- end }}
 
