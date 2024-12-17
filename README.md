@@ -10,12 +10,15 @@ What's been implemented so far?
 1. Deploy mariadb primary and replica from bitnami/mariadb helm chart
 2. Deploy openmrs backend
 3. Deploy openmrs frontend and gateway
+4. Deploy to AWS with RDS or mariadb cluster using helm chart
+5. Use mariadb-galera cluster as an option to deploy.
 
 What's coming next?
 
-1. Develop terraform to deploy to AWS with RDS or mariadb cluster using helm chart
-2. Provide mariadb-galera cluster as an option to deploy. Make changes in the openmrs-core to support mariadb-galera cluster and mariadb read-only replicas.
-3. ...
+1. Make changes in the openmrs-core to support mariadb-galera cluster and mariadb read-only replicas.
+2. Write terraform for deploying ALB instead of manual setup
+3. Deploy Grafana for logging
+4. ...
 
 See https://openmrs.atlassian.net/wiki/x/tgBLCw for more details.
 
