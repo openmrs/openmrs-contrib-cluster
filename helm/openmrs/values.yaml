@@ -9,7 +9,7 @@ ingress:
   enabled: false
 
 service:
-  type: ClusterIP
+  type: NodePort
   port: 80
 
 openmrs-backend:

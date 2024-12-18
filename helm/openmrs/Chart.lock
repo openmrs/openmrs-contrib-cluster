@@ -1,12 +1,12 @@
 dependencies:
 - name: openmrs-backend
-  repository: oci://registry-1.docker.io/openmrs
+  repository: file://../openmrs-backend
   version: 0.1.4
 - name: openmrs-frontend
-  repository: oci://registry-1.docker.io/openmrs
+  repository: file://../openmrs-frontend
   version: 0.1.0
 - name: openmrs-gateway
-  repository: oci://registry-1.docker.io/openmrs
+  repository: file://../openmrs-gateway
   version: 0.1.0
-digest: sha256:2577ae9dbe725ff64bc25fcc7d6e4d32ac35358c1a830a8b9a31476b3b9ba5c7
-generated: "2024-11-15T13:43:18.081581+05:30"
+digest: sha256:a47cafe9e9145ed3a4c3ad7cee317dc0fb2444ce654d8e4bdc330f08a9d49a01
+generated: "2024-12-06T13:19:45.95427+01:00"

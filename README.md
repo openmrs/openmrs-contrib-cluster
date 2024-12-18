@@ -35,6 +35,9 @@ Make sure that Docker is running and issue the following command:
       cd helm
       kind create cluster --config=kind-config.yaml
 
+      # Set kubectl context to your local kind cluster
+      kubectl cluster-info --context kind-kind
+
 
 How to try it out?
 
@@ -118,7 +121,7 @@ To Initialize terraform backend run:
       terraform apply
       cd ..
 
-#### Running Terraform (AWS only)
+#### Running Terraform
 
 
 1. Deploy the cluster and supporting services
@@ -129,11 +132,18 @@ To Initialize terraform backend run:
       terraform apply -var-file=nonprod.tfvars
 
 
-2. Run helm
+2. Run helm to deploy ALB controller and OpenMRS
 
 
+      cd terraform-helm/
+      terraform init
+      terraform apply -var-file=nonprod.tfvars
+
+
+3. Configure kubectl client to monitor your cluster (optionally)
+
+      
       aws eks update-kubeconfig --name openmrs-cluster-nonprod
-      helm install openmrs oci://registry-1.docker.io/openmrs/openmrs
 
 
 ## Development Setup
@@ -165,23 +175,58 @@ This is a one-time setup that needs to be run only when the repo is cloned.
 
 Now before every commit, the hooks will be executed.
 
+### Developing Helm Charts
+
+Once you have local or AWS cluster setup (see above) and kubectl is pointing to your cluster you can run helm install 
+directly from source. To verify you kubectl is connected to the correct cluster run:
+
+
+      kubectl cluster-info
+
+
+If you need to change your kubectl cluster run:
+
+
+      # For AWS
+      aws eks update-kubeconfig --name openmrs-cluster-nonprod
+      
+      # For local Kind cluster
+      kubectl cluster-info --context kind-kind
+
+
+To install Helm Charts from source run (see above for possible settings):
+
+
+      cd helm/openmrs
+      helm install openmrs .
+
+
+If you made any changes in helm/openmrs-backend or helm/openmrs-frontend or helm/openmrs-gateway you need to update 
+dependencies and run helm upgrade.
+
+
+      # form helm/openmrs dir
+      helm dependency update
+      helm upgrade openmrs .
+
 ## Directory Structure
 ```
 helm                              # helm charts
-terraform                         # terraform setup
+terraform-backend                 # terraform AWS backend setup
+terraform                         # terraform AWS setup
 ├── ...
 ├── aws
 ├── ├── policies                  # aws custom policies
 ├── ├── roles                     # aws custom roles
-├── terraform
-|   |── modules                   # contains reusable resources across environemts
-│       ├── vpc
-│       ├── eks
-│       ├── ....
+|── modules                       # contains reusable resources across environemts
+│   ├── vpc
+│   ├── eks
+│   ├── ....
 │   ├── main.tf                   # File where provider and modules are initialized
 │   ├── variables.tf
 │   ├── nonprod.tfvars            # values for nonprod environment
 │   ├── outputs.tf
 │   ├── config.s3.tfbackend       # backend config values for s3 backend
 └── ...
+terraform-helm                    # terraform Helm installer
 ```

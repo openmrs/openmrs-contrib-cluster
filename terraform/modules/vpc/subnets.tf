@@ -5,9 +5,10 @@ resource "aws_subnet" "public_a" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name        = "openmrs-public-subnet-a-${var.vpc_suffix}"
-    owner       = var.owner
-    Subnet-Type = "public-${var.vpc_suffix}"
+    Name                     = "openmrs-public-subnet-a-${var.vpc_suffix}"
+    owner                    = var.owner
+    Subnet-Type              = "public-${var.vpc_suffix}"
+    "kubernetes.io/role/elb" = "1"
   }
 }
 
@@ -18,9 +19,10 @@ resource "aws_subnet" "public_b" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name        = "openmrs-public-subnet-b-${var.vpc_suffix}"
-    owner       = var.owner
-    Subnet-Type = "public-${var.vpc_suffix}"
+    Name                     = "openmrs-public-subnet-b-${var.vpc_suffix}"
+    owner                    = var.owner
+    Subnet-Type              = "public-${var.vpc_suffix}"
+    "kubernetes.io/role/elb" = "1"
   }
 }
 
@@ -31,9 +33,10 @@ resource "aws_subnet" "private_a" {
   map_public_ip_on_launch = false
 
   tags = {
-    Name        = "openmrs-private-subnet-a-${var.vpc_suffix}"
-    owner       = var.owner
-    Subnet-Type = "private-${var.vpc_suffix}"
+    Name                              = "openmrs-private-subnet-a-${var.vpc_suffix}"
+    owner                             = var.owner
+    Subnet-Type                       = "private-${var.vpc_suffix}"
+    "kubernetes.io/role/internal-elb" = "1"
   }
 
 }
@@ -45,9 +48,10 @@ resource "aws_subnet" "private_b" {
   map_public_ip_on_launch = false
 
   tags = {
-    Name        = "openmrs-private-subnet-b-${var.vpc_suffix}"
-    owner       = var.owner
-    Subnet-Type = "private-${var.vpc_suffix}"
+    Name                              = "openmrs-private-subnet-b-${var.vpc_suffix}"
+    owner                             = var.owner
+    Subnet-Type                       = "private-${var.vpc_suffix}"
+    "kubernetes.io/role/internal-elb" = "1"
   }
 }
 
