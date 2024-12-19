@@ -84,6 +84,11 @@ resource "helm_release" "aws_load_balancer_controller" {
     name  = "serviceAccount.name"
     value = "aws-load-balancer-controller"
   }
+
+  set {
+    name  = "ingressClassParams.spec.scheme"
+    value = "internet-facing"
+  }
 }
 
 resource "helm_release" "openmrs" {
@@ -91,7 +96,7 @@ resource "helm_release" "openmrs" {
 
   repository = "oci://registry-1.docker.io/openmrs"
   chart      = "openmrs"
-  version    = "0.1.4"
+  version    = "0.1.5"
 
   set {
     name  = "openmrs-gateway.ingress.enabled"
