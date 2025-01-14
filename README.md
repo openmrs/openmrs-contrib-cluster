@@ -12,15 +12,23 @@ What's been implemented so far?
 3. Deploy openmrs frontend and gateway
 4. Deploy to AWS with RDS or mariadb cluster using helm chart
 5. Use mariadb-galera cluster as an option to deploy.
+6. Deploy ALB with terraform
 
 What's coming next?
 
 1. Make changes in the openmrs-core to support mariadb-galera cluster and mariadb read-only replicas.
-2. Write terraform for deploying ALB instead of manual setup
-3. Deploy Grafana for logging
-4. ...
+2. Deploy Grafana for logging
+3. ...
 
 See https://openmrs.atlassian.net/wiki/x/tgBLCw for more details.
+
+## Other options
+
+### AWS
+
+If you intend to deploy on AWS and you are intersted in a solution that runs natively on AWS and is not easily movable to on-prem or any other cloud provider you may want to have a look at https://github.com/openmrs/openmrs-contrib-cluster-aws-ecs It showcases the usage of AWS CDK instead of Terraform for setting up an ECS cluster instead of Kubernetes. It also utilizes AWS Fargate and AWS Aurora managed services for high availability and scalability. 
+
+At this point we did not add support for AWS Fargate and AWS Aurora for Kubernetes deployment as part of our general solution in this repo, but we may do that in the future if there is enough interest or a contribution.
 
 ## Usage
 
