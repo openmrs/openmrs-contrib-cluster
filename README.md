@@ -122,6 +122,8 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `op
 
 See [MariaDB](https://github.com/bitnami/charts/blob/main/bitnami/mariadb/README.md) helm chart for other MariaDB parameters.
 
+See [ElasticSearch](https://github.com/bitnami/charts/blob/main/bitnami/elasticsearch/README.md) helm chart for other ElasticSearch parameters.
+
 ### Terraform and AWS
 
 #### Setting up terraform and AWS
