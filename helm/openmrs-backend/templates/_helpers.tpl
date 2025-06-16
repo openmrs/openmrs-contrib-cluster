@@ -60,3 +60,27 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Get the service name of elastic search created by bitmani elastic helm chart
+*/}}
+{{- define "elasticsearch.serviceName" -}}
+{{- $name := "elasticsearch" -}}
+{{- $releaseName := regexReplaceAll "(-?[^a-z\\d\\-])+-?" (lower .Release.Name) "-" -}}
+{{- if contains $name $releaseName -}}
+{{- $releaseName | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s" $releaseName $name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Create the url for the elastic search
+*/}}
+{{- define "openmrs-elasticsearch.url" -}}
+{{- $releaseNameSpace := .Release.Namespace -}}
+{{- $clusterDomain := "svc.cluster.local" }}
+{{- $port := default "9200"  quote .Values.elasticsearch.service.ports.restAPI }}
+{{- $fullurl := printf "%s%s.%s.%s:%s" "http://" (include "elasticsearch.serviceName" .) $releaseNameSpace $clusterDomain $port }}
+{{- quote $fullurl }}
+{{- end }}
