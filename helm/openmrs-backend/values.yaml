@@ -45,6 +45,72 @@ mariadb:
       enabled: true
       size: 8Gi
 
+elasticsearch:
+  enabled: true
+  service:
+    ports:
+      restAPI: 9200
+#Set up Elastic search as single node
+  master:
+    masterOnly: false
+    replicaCount: 1
+    heapSize: 128m
+    resources:
+      limits:
+        cpu: 750m
+        ephemeral-storage: 2Gi
+        memory: 768Mi
+      requests:
+        cpu: 500m
+        ephemeral-storage: 50Mi
+        memory: 512Mi
+    persistence:
+      enabled: true
+      size: 8Gi
+
+  data:
+    replicaCount: 0
+    heapSize: 1024m
+    resources:
+      limits:
+        cpu: 750m
+        ephemeral-storage: 2Gi
+        memory: 1536Mi
+      requests:
+        cpu: 500m
+        ephemeral-storage: 50Mi
+        memory: 1024Mi
+    persistence:
+      enabled: true
+      size: 8Gi
+
+  coordinating:
+    replicaCount: 0
+    heapSize: 128m
+    resources:
+      limits:
+        cpu: 750m
+        ephemeral-storage: 2Gi
+        memory: 768Mi
+      requests:
+        cpu: 500m
+        ephemeral-storage: 50Mi
+        memory: 512Mi
+
+
+  ingest:
+    replicaCount: 0
+    heapSize: 128m
+    resources:
+      limits:
+        cpu: 750m
+        ephemeral-storage: 2Gi
+        memory: 768Mi
+      requests:
+        cpu: 500m
+        ephemeral-storage: 50Mi
+        memory: 512Mi
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: "backend" # Overwrite for now until gateway can be configured

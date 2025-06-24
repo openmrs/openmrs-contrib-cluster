@@ -34,3 +34,8 @@ dependencies:
     repository: https://charts.bitnami.com/bitnami
     condition: galera.enabled
     alias: galera
+
+  - name: elasticsearch
+    version: 22.0.0
+    repository: https://charts.bitnami.com/bitnami
+    condition: elasticsearch.enabled
