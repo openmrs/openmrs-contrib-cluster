@@ -46,7 +46,7 @@ mariadb:
       size: 8Gi
 
 elasticsearch:
-  enabled: true
+  enabled: false
   service:
     ports:
       restAPI: 9200
@@ -182,14 +182,25 @@ resources: {}
 
 livenessProbe:
   httpGet:
-    path: /openmrs
+    path: /openmrs/health/alive
     port: http
-  initialDelaySeconds: 120
+  failureThreshold: 3
+  timeoutSeconds: 1
+  periodSeconds: 10
 readinessProbe:
   httpGet:
-    path: /openmrs
+    path: /openmrs/health/started
     port: http
-  initialDelaySeconds: 120
+  failureThreshold: 1
+  timeoutSeconds: 1
+  periodSeconds: 10
+startupProbe:
+  httpGet:
+    path: /openmrs/health/alive
+    port: http
+  failureThreshold: 60 # wait for max 10 minutes to startup
+  timeoutSeconds: 1
+  periodSeconds: 10
 
 autoscaling:
   enabled: false

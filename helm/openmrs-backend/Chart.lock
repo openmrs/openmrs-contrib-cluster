@@ -5,5 +5,8 @@ dependencies:
 - name: mariadb-galera
   repository: https://charts.bitnami.com/bitnami
   version: 14.0.12
-digest: sha256:66a5c6b2ac176c97dfde82afb4a800785e447707a6fb780e5d8df1e4a6d2f83c
-generated: "2024-11-15T12:08:42.836371+05:30"
+- name: elasticsearch
+  repository: https://charts.bitnami.com/bitnami
+  version: 22.0.0
+digest: sha256:2dc7f5d6d880f931cb03b3560d5abd25106338ea57323338e5cfdde4953ea45d
+generated: "2025-06-25T14:50:12.188088+02:00"
