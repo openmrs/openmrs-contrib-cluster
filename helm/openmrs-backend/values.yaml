@@ -46,10 +46,24 @@ mariadb:
       size: 8Gi
 
 elasticsearch:
-  enabled: false
+  enabled: true
   service:
     ports:
       restAPI: 9200
+  initContainers:
+    - name: install-plugins
+      image: docker.io/bitnami/elasticsearch:9.0.0-debian-12-r2
+      command: ["/bin/bash"]
+      args:
+        - -ec
+        - |
+          #!/bin/bash
+          ./opt/bitnami/elasticsearch/bin/elasticsearch-plugin install analysis-phonetic
+          cp -nr /opt/bitnami/elasticsearch/plugins/* /plugins
+      volumeMounts:
+        - name: empty-dir
+          mountPath: /plugins
+          subPath: app-plugins-dir
 #Set up Elastic search as single node
   master:
     masterOnly: false
@@ -111,6 +125,15 @@ elasticsearch:
         ephemeral-storage: 50Mi
         memory: 512Mi
 
+
+infinispan:
+  jgroups_cfg: default-configs/default-jgroups-kubernetes.xml
+  enabled: true
+  bind_port: 6000
+  port_range: 0
+  clusterDomain: cluster.local
+
+defaultOmrsServerOpts: "-Dfile.encoding=UTF-8 -server -Djava.security.egd=file:/dev/./urandom -Djava.awt.headless=true -Djava.awt.headlesslib=true"
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: "backend" # Overwrite for now until gateway can be configured
@@ -137,7 +160,7 @@ podSecurityContext:
   enabled: true
   fsGroup: 1001
   runAsUser: 1001
-  fsGroupChangePolicy": "Always"
+  fsGroupChangePolicy: "Always"
 
 securityContext: {}
   # capabilities:

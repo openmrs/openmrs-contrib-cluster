@@ -1,0 +1,19 @@
+{{- if .Values.infinispan.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ printf "%s-ping" (include "openmrs-backend.fullname" .) }}
+  labels:
+    {{- include "openmrs-backend.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+    - port: 8888
+      targetPort: {{ .Values.infinispan.bind_port }}
+      protocol: TCP
+      name: ping
+  selector:
+    {{- include "openmrs-backend.selectorLabels" . | nindent 4 }}
+{{- end }}
