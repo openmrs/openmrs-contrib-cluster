@@ -141,6 +141,10 @@ See [ElasticSearch](https://github.com/bitnami/charts/blob/main/bitnami/elastics
       brew install awscli
       aws configure
 
+Before running Terraform commands, note that in the `terraform/aws` folder you will find AWS custom policies and roles used by the project:
+
+- `terraform/aws/policies` — contains AWS IAM policies
+- `terraform/aws/roles` — contains AWS IAM roles
 
 #### Initialize Terraform backend (one time operation)
 
