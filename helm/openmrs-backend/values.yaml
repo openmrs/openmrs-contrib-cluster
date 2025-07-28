@@ -50,7 +50,8 @@ elasticsearch:
   service:
     ports:
       restAPI: 9200
-#Set up Elastic search as single node
+  plugins: "analysis-phonetic"
+  # Set up Elastic search as single node
   master:
     masterOnly: false
     replicaCount: 1
@@ -96,7 +97,6 @@ elasticsearch:
         cpu: 500m
         ephemeral-storage: 50Mi
         memory: 512Mi
-
 
   ingest:
     replicaCount: 0
