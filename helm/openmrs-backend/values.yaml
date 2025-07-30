@@ -111,6 +111,22 @@ elasticsearch:
         ephemeral-storage: 50Mi
         memory: 512Mi
 
+minio:
+  enabled: false
+  mode: distributed
+  statefulset:
+    replicaCount: 4
+    zones: 1
+    drivesPerNode: 1
+  provisioning:
+    enabled: true
+    buckets:
+      - name: openmrs
+    users:
+      - username: openmrs
+        password: OpenMRS123
+        policy: readwrite
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: "backend" # Overwrite for now until gateway can be configured

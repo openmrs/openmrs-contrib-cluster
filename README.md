@@ -36,7 +36,7 @@ At this point we did not add support for AWS Fargate and AWS Aurora for Kubernet
 
 We recommend https://kind.sigs.k8s.io/ for local testing.
 
-Make sure that Docker is running and issue the following command:
+Make sure that Docker is running and issue the following commands:
 
 
       brew install kind
@@ -46,20 +46,28 @@ Make sure that Docker is running and issue the following command:
       # Set kubectl context to your local kind cluster
       kubectl cluster-info --context kind-kind
 
+      # Setup Kubernetes Dashboard
+      brew install helm
+      helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
+      helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard
+      # Create token for login
+      kubectl -n kubernetes-dashboard create token admin-user
+      kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
+      # Go to http://localhost:8443/ and login with generated token
 
 How to try it out?
 
 From local source:
 
-      helm install --set global.defaultStorageClass=standard openmrs .
+      helm upgrade --install --create-namespace -n openmrs --values ../kind-openmrs.yaml openmrs .
 
 or from registry:
 
-      helm install --set global.defaultStorageClass=standard openmrs oci://registry-1.docker.io/openmrs/openmrs
+      helm upgrade --install --create-namespace -n openmrs --set global.defaultStorageClass=standard openmrs oci://registry-1.docker.io/openmrs/openmrs
 
 or if you want to use mariadb-galera cluster instead of mariadb with basic primary-secondary replication:
 
-      helm install --set global.defaultStorageClass=standard --set openmrs-backend.mariadb.enabled=false --set openmrs-backend.galera.enabled=true openmrs oci://registry-1.docker.io/openmrs/openmrs
+      helm upgrade --install --create-namespace -n openmrs --set global.defaultStorageClass=standard --set openmrs-backend.mariadb.enabled=false --set openmrs-backend.galera.enabled=true openmrs oci://registry-1.docker.io/openmrs/openmrs
 
 
 Once installed you will see instructions on how to configure port-forwarding and access the instance. If you deploy to a cloud provider you will need to configure a load balancer / gateway to point to openmrs-gateway service on port 80.
@@ -229,7 +237,7 @@ To install Helm Charts from source run (see above for possible settings):
 
 
       cd helm/openmrs
-      helm install openmrs .
+      helm upgrade --install --create-namespace -n openmrs --values ../kind-openmrs.yaml openmrs .
 
 
 If you made any changes in helm/openmrs-backend or helm/openmrs-frontend or helm/openmrs-gateway you need to update 

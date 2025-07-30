@@ -1,0 +1,8 @@
+global:
+  defaultStorageClass: standard
+openmrs-backend:
+  image:
+    pullPolicy: Always #IfNotPresent #Always
+
+
+

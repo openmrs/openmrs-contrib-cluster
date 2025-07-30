@@ -1,0 +1,11 @@
+global:
+  defaultStorageClass: standard
+openmrs-backend:
+  image:
+    pullPolicy: Always #IfNotPresent #Always
+  elasticsearch:
+    enabled: true
+    master:
+      replicaCount: 3
+
+

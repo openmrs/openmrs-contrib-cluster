@@ -39,3 +39,8 @@ dependencies:
     version: 22.0.0
     repository: https://charts.bitnami.com/bitnami
     condition: elasticsearch.enabled
+
+  - name: minio
+    version: 17.0.16
+    repository: https://charts.bitnami.com/bitnami
+    condition: minio.enabled

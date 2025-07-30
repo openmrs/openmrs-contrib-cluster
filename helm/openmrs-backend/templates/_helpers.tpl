@@ -84,3 +84,27 @@ Create the url for the elastic search
 {{- $fullurl := printf "%s%s.%s.%s:%s" "http://" (include "elasticsearch.serviceName" .) $releaseNameSpace $clusterDomain $port }}
 {{- quote $fullurl }}
 {{- end }}
+
+{{/*
+Get the service name of minio created by bitmani elastic helm chart
+*/}}
+{{- define "minio.serviceName" -}}
+{{- $name := "minio" -}}
+{{- $releaseName := regexReplaceAll "(-?[^a-z\\d\\-])+-?" (lower .Release.Name) "-" -}}
+{{- if contains $name $releaseName -}}
+{{- $releaseName | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s" $releaseName $name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Create the url for the minio
+*/}}
+{{- define "openmrs-minio.url" -}}
+{{- $releaseNameSpace := .Release.Namespace -}}
+{{- $clusterDomain := "svc.cluster.local" }}
+{{- $port := default "9000"  quote .Values.minio.containerPorts.api }}
+{{- $fullurl := printf "%s%s.%s.%s:%s" "http://" (include "minio.serviceName" .) $releaseNameSpace $clusterDomain $port }}
+{{- quote $fullurl }}
+{{- end }}
