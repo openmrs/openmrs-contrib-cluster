@@ -85,12 +85,6 @@ Create the url for the elastic search
 {{- quote $fullurl }}
 {{- end }}
 
-{{- define "elasticsearch.wait.script" -}}
-{{- $script := printf  "while [ $(curl -sw '%s' %s -o /dev/null) -ne 200 ]; do sleep 5; echo 'Waiting for the elasticsearch...'; done" "%{http_code}" (include "openmrs-elasticsearch.url" .) }}
-{{- $scriptRegex := regexReplaceAll "\"" $script "" | quote }}
-{{- regexSplit "" $scriptRegex 1 }}
-{{- end }}
-
 {{- define "openmrs.default.serverOptions" -}}
 {{- .Values.defaultOmrsServerOpts }}
 {{- end }}
@@ -99,12 +93,8 @@ Create the url for the elastic search
 {{- printf "_ping._tcp.%s-ping.%s.svc.%s" (include "openmrs-backend.fullname" .) .Release.Namespace .Values.infinispan.clusterDomain }}
 {{- end }}
 
-{{- define "infinispan.cache.jgroups_cfg" -}}
-{{- .Values.infinispan.jgroups_cfg }}
-{{- end }}
-
 {{- define "infinispan.cache.args" }}
-{{- printf "-Djgroups.dns.query=%s -Dhibernate.cache.infinispan.jgroups_cfg=%s -Dcache.type=%s -Djgroups.bind.port=%s -Djgroups.port_range=%s -Djgroups.dns.record=SRV -Djgroups.bind.address=%s" (include "infinispan.cache.jgroups.dnsQuery" .) (include "infinispan.cache.jgroups_cfg" .) "cluster"  (quote .Values.infinispan.bind_port) (quote .Values.infinispan.port_range) "SITE_LOCAL"}}
+{{- printf "-Djgroups.dns.query=%s -Dcache.type=%s -Djgroups.bind.port=%s -Djgroups.port_range=%s -Djgroups.dns.record=SRV -Djgroups.bind.address=%s -Dcache.stack=kubernetes" (include "infinispan.cache.jgroups.dnsQuery" .)  "cluster"  (quote .Values.infinispan.bind_port) (quote .Values.infinispan.port_range) "SITE_LOCAL"}}
 {{- end }}
 
 {{- define "openmrs.serverOptions" -}}

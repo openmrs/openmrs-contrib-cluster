@@ -32,13 +32,6 @@ spec:
       serviceAccountName: {{ include "openmrs-backend.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      initContainers:
-      {{- if .Values.elasticsearch.enabled }}
-        - name: wait-for-elasticsearch
-          image: curlimages/curl:latest
-          command: [ "/bin/sh","-c" ]
-          args: {{ include "elasticsearch.wait.script" . }}
-      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
