@@ -45,6 +45,9 @@ Make sure that Docker is running and issue the following commands:
 
       # Set kubectl context to your local kind cluster
       kubectl cluster-info --context kind-kind
+      
+      # Create local path provisioner and ingress
+      kubectl apply -f kind-init.yaml
 
       # Setup Kubernetes Dashboard
       brew install helm
@@ -71,6 +74,10 @@ or if you want to use mariadb-galera cluster instead of mariadb with basic prima
 
 
 Once installed you will see instructions on how to configure port-forwarding and access the instance. If you deploy to a cloud provider you will need to configure a load balancer / gateway to point to openmrs-gateway service on port 80.
+
+If running locally run:
+
+      kubectl -n openmrs port-forward svc/gateway 8080:80
 
 #### Parameters
 

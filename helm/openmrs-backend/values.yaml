@@ -114,6 +114,8 @@ elasticsearch:
 minio:
   enabled: false
   mode: distributed
+  auth:
+    rootPassword: Root1234
   statefulset:
     replicaCount: 4
     zones: 1
@@ -125,7 +127,7 @@ minio:
     users:
       - username: openmrs
         password: OpenMRS123
-        policy: readwrite
+        policies: ["readwrite"]
 
 imagePullSecrets: []
 nameOverride: ""
@@ -199,22 +201,23 @@ resources: {}
 livenessProbe:
   httpGet:
     path: /openmrs/health/alive
-    port: http
+    port: 8080
   failureThreshold: 3
   timeoutSeconds: 1
   periodSeconds: 10
 readinessProbe:
   httpGet:
     path: /openmrs/health/started
-    port: http
+    port: 8080
   failureThreshold: 1
   timeoutSeconds: 1
   periodSeconds: 10
 startupProbe:
   httpGet:
     path: /openmrs/health/alive
-    port: http
-  failureThreshold: 60 # wait for max 10 minutes to startup
+    port: 8080
+  initialDelaySeconds: 20
+  failureThreshold: 120 # wait for max 20 minutes to startup
   timeoutSeconds: 1
   periodSeconds: 10
 
@@ -223,4 +226,4 @@ autoscaling:
   minReplicas: 1
   maxReplicas: 100
   targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80

@@ -21,8 +21,8 @@ data:
   OMRS_SEARCH_ES_URIS: {{ include "openmrs-elasticsearch.url" . }}
   {{- end }}
   {{- if .Values.minio.enabled }}
-  STORAGE_TYPE: "s3"
-  STORAGE_S3_REGION: "us-east-1"
-  STORAGE_S3_ENDPOINT: {{ include "openmrs-minio.url" . }}
-  STORAGE_S3_FORCEPATHSTYLE: "true"
+  storage.type: "s3"
+  storage.s3.region: "us-east-1"
+  storage.s3.endpoint: {{ include "openmrs-minio.url" . }}
+  storage.s3.forcePathStyle: "true"
   {{- end }}

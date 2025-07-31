@@ -3,6 +3,12 @@ global:
 openmrs-backend:
   image:
     pullPolicy: Always #IfNotPresent #Always
+  elasticsearch:
+    enabled: true
+    master:
+      replicaCount: 3
+  minio:
+    enabled: true
 
 
 
