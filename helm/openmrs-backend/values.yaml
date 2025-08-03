@@ -128,6 +128,8 @@ minio:
       - username: openmrs
         password: OpenMRS123
         policies: ["readwrite"]
+  containerPorts:
+    api: 9000
 
 imagePullSecrets: []
 nameOverride: ""
@@ -155,7 +157,7 @@ podSecurityContext:
   enabled: true
   fsGroup: 1001
   runAsUser: 1001
-  fsGroupChangePolicy": "Always"
+  fsGroupChangePolicy: "Always"
 
 securityContext: {}
   # capabilities:
