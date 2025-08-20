@@ -13,6 +13,10 @@ service:
   port: 80
 
 openmrs-backend:
+  infinispan:
+    clustered: true
+    bind_port: 7800
+
   db:
     hostname: ""
 

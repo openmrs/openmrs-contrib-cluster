@@ -13,6 +13,10 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
+infinispan:
+  clustered: true
+  bind_port: 7800
+
 db:
   hostname: mariadb
 
@@ -155,7 +159,7 @@ podSecurityContext:
   enabled: true
   fsGroup: 1001
   runAsUser: 1001
-  fsGroupChangePolicy": "Always"
+  fsGroupChangePolicy: "Always"
 
 securityContext: {}
   # capabilities:

@@ -11,5 +11,15 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+    {{ if .Values.infinispan.clustered }}
+    - port: {{ .Values.infinispan.bind_port }}
+      targetPort: {{ .Values.infinispan.bind_port }}
+      protocol: TCP
+      name: infinispan-hibernate
+    - port: {{ add .Values.infinispan.bind_port 10 }}
+      targetPort: {{ add .Values.infinispan.bind_port 10 }}
+      protocol: TCP
+      name: infinispan-api
+    {{ end }}
   selector:
     {{- include "openmrs-backend.selectorLabels" . | nindent 4 }}

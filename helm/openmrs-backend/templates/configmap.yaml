@@ -26,3 +26,12 @@ data:
   storage.s3.endpoint: {{ include "openmrs-minio.url" . }}
   storage.s3.forcePathStyle: "true"
   {{- end }}
+  {{- if .Values.infinispan.clustered }}
+  cache.type: "cluster"
+  cache.stack: "kubernetes"
+  jgroups.dns.query: '{{ include "openmrs-backend.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local'
+  jgroups.bind.port: {{ .Values.infinispan.bind_port | quote }}
+  {{- end }}
+  {{- if not .Values.infinispan.clustered }}
+  cache.type: "local"
+  {{- end }}
