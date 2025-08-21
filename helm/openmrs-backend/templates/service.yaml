@@ -16,8 +16,8 @@ spec:
       targetPort: {{ .Values.infinispan.bind_port }}
       protocol: TCP
       name: infinispan-hibernate
-    - port: {{ add .Values.infinispan.bind_port 10 }}
-      targetPort: {{ add .Values.infinispan.bind_port 10 }}
+    - port: {{ add .Values.infinispan.bind_port 1 }}
+      targetPort: {{ add .Values.infinispan.bind_port 1 }}
       protocol: TCP
       name: infinispan-api
     {{ end }}

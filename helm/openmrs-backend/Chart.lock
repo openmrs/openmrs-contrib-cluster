@@ -1,15 +1,15 @@
 dependencies:
 - name: mariadb
   repository: https://charts.bitnami.com/bitnami
-  version: 19.0.5
+  version: 22.0.0
 - name: mariadb-galera
   repository: https://charts.bitnami.com/bitnami
-  version: 14.0.12
+  version: 16.0.0
 - name: elasticsearch
   repository: https://charts.bitnami.com/bitnami
   version: 22.0.0
 - name: minio
   repository: https://charts.bitnami.com/bitnami
   version: 17.0.16
-digest: sha256:4025e745afd29ada6e51dcbb09da2d63ecad81f4062449f8008f0038bb180122
-generated: "2025-07-28T14:36:04.83583+02:00"
+digest: sha256:620e64f803e048f02737a5e7d766ef78b190f38829e47bc47caaebf5dc11b19b
+generated: "2025-08-20T14:18:28.262096+02:00"
