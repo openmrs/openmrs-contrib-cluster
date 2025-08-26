@@ -50,20 +50,20 @@ spec:
               echo "Resolving MariaDB hosts..."
               HOSTS=""
               {{ if .Values.galera.enabled }}
-              STATEFULSET={{ .Release.Name }}-galera
               SERVICE={{ .Release.Name }}-galera
+              STATEFULSET=$SERVICE
               {{ end }}
               {{ if .Values.mariadb.enabled }}
-              STATEFULSET={{ .Release.Name }}-mariadb-secondary
               SERVICE={{ .Release.Name }}-mariadb
+              STATEFULSET=$SERVICE-secondary
               {{ end }}
               REPLICA_COUNT=$(kubectl get statefulset $STATEFULSET -n {{ .Release.Namespace }} -o jsonpath='{.spec.replicas}')
               {{ if .Values.mariadb.enabled }}
               # Add primary instance
-              REPLICA_COUNT=$((REPLICA_COUNT + 1))
+              HOSTS="$SERVICE-primary-0.${SERVICE}-headless.{{ .Release.Namespace }}.svc.cluster.local"
               {{ end }}
               for i in $(seq 0 $((REPLICA_COUNT-1))); do
-                POD_FQDN="$SERVICE-${i}.${SERVICE}-headless.{{ .Release.Namespace }}.svc.cluster.local"
+                POD_FQDN="$STATEFULSET-${i}.${SERVICE}-headless.{{ .Release.Namespace }}.svc.cluster.local"
               
                 # Append to HOSTS, separated by comma
                 if [ -z "$HOSTS" ]; then
