@@ -28,6 +28,9 @@ galera:
     name: openmrs
     user: openmrs
     password: OpenMRS123
+  galera:
+    mariabackup:
+      password: Backup123
 
 mariadb:
   architecture: replication

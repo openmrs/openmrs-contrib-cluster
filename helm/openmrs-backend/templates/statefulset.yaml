@@ -32,6 +32,57 @@ spec:
       serviceAccountName: {{ include "openmrs-backend.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        - name: workdir
+          emptyDir: { }
+
+      {{ if or (.Values.galera.enabled) (.Values.mariadb.enabled) }}
+      initContainers:
+        - name: resolve-mariadb-hosts
+          image: bitnami/kubectl:1.33.4
+          envFrom:
+            - configMapRef:
+                name: {{ include "openmrs-backend.fullname" . }}
+          command:
+            - sh
+            - -c
+            - |
+              echo "Resolving MariaDB hosts..."
+              HOSTS=""
+              {{ if .Values.galera.enabled }}
+              STATEFULSET={{ .Release.Name }}-galera
+              SERVICE={{ .Release.Name }}-galera
+              {{ end }}
+              {{ if .Values.mariadb.enabled }}
+              STATEFULSET={{ .Release.Name }}-mariadb-secondary
+              SERVICE={{ .Release.Name }}-mariadb
+              {{ end }}
+              REPLICA_COUNT=$(kubectl get statefulset $STATEFULSET -n {{ .Release.Namespace }} -o jsonpath='{.spec.replicas}')
+              {{ if .Values.mariadb.enabled }}
+              # Add primary instance
+              REPLICA_COUNT=$((REPLICA_COUNT + 1))
+              {{ end }}
+              for i in $(seq 0 $((REPLICA_COUNT-1))); do
+                POD_FQDN="$SERVICE-${i}.${SERVICE}-headless.{{ .Release.Namespace }}.svc.cluster.local"
+              
+                # Append to HOSTS, separated by comma
+                if [ -z "$HOSTS" ]; then
+                  HOSTS="$POD_FQDN"
+                else
+                  HOSTS="$HOSTS,$POD_FQDN"
+                fi
+              done
+              {{ if .Values.galera.enabled }}
+                MODE="loadbalance"
+              {{ else }}
+                MODE="replication"
+              {{ end }}
+              echo "jdbc:mariadb:$MODE://$HOSTS:3306/$OMRS_DB_NAME?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8" > /work-dir/jdbc-url.txt
+              echo "JDBC URL written: $(cat /work-dir/jdbc-url.txt)"
+          volumeMounts:
+            - name: workdir
+              mountPath: /work-dir
+      {{ end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -56,8 +107,20 @@ spec:
             - secretRef:
                 name: {{ include "openmrs-backend.fullname" . }}
           volumeMounts:
+            - name: workdir
+              mountPath: /work-dir
             - name: data
               mountPath: /openmrs/data
+          {{ if or (.Values.galera.enabled) (.Values.mariadb.enabled) }}
+          command:
+            - sh
+            - -c
+            - |
+              echo "Reading JDBC URL from /work-dir/jdbc-url.txt"
+              export OMRS_DB_URL=$(cat /work-dir/jdbc-url.txt)
+              echo "OMRS_DB_URL=$OMRS_DB_URL"
+              exec /openmrs/startup.sh
+          {{ end }}
   {{- if .Values.persistence.enabled }}
   volumeClaimTemplates:
     - metadata:

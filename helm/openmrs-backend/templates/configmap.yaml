@@ -9,12 +9,14 @@ data:
   OMRS_DB_HOSTNAME: {{ .Values.db.hostname | quote}}
   {{- end }}
   {{- if .Values.mariadb.enabled }}
+  OMRS_DB: "mariadb"
   OMRS_DB_NAME: {{ .Values.mariadb.auth.database | quote }}
-  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb-primary"
+  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb-headless"
   {{- end }}
   {{- if .Values.galera.enabled }}
+  OMRS_DB: "mariadb"
   OMRS_DB_NAME: {{ .Values.galera.db.name | quote }}
-  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-galera"
+  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-galera-headless"
   {{- end }}
   {{- if .Values.elasticsearch.enabled }}
   OMRS_SEARCH: "elasticsearch"
