@@ -1,12 +1,9 @@
 dependencies:
 - name: openmrs-backend
   repository: file://../openmrs-backend
-  version: 0.1.5
+  version: 1.0.0
 - name: openmrs-frontend
   repository: file://../openmrs-frontend
-  version: 0.1.0
-- name: openmrs-gateway
-  repository: file://../openmrs-gateway
-  version: 0.1.1
-digest: sha256:05f1e58e92eb1fd838133c0bcc32da93c61ddb64cd937ec0fe83d7e4c03e1e97
-generated: "2025-06-25T10:11:42.792296+02:00"
+  version: 1.0.0
+digest: sha256:ddc86a383f0df7b7177fad873d5283f0410d81aa26c8ddbce7df4b340da3af63
+generated: "2025-08-27T11:43:30.701224+02:00"
