@@ -16,9 +16,9 @@ fullnameOverride: "frontend" # Overwrite for now until gateway can be configured
 
 serviceAccount:
   # Specifies whether a service account should be created
-  create: true
+  create: false
   # Automatically mount a ServiceAccount's API credentials?
-  automount: true
+  automount: false
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
@@ -46,12 +46,15 @@ service:
 ingress:
   enabled: true
   className: "nginx"
-  annotations: {}
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/app-root: /openmrs/spa/home
   rules:
     - http:
       paths:
-        - path: /openmrs/spa/
-          pathType: Prefix
+        - path: /openmrs/spa(/|$)(.*)
+          pathType: ImplementationSpecific
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
@@ -73,10 +76,16 @@ livenessProbe:
   httpGet:
     path: /
     port: http
+  failureThreshold: 3
+  timeoutSeconds: 1
+  periodSeconds: 10
 readinessProbe:
   httpGet:
     path: /
     port: http
+  failureThreshold: 3
+  timeoutSeconds: 1
+  periodSeconds: 10
 
 autoscaling:
   enabled: false

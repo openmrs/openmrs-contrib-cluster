@@ -5,13 +5,6 @@
 global:
   defaultStorageClass: "gp2"
 
-ingress:
-  enabled: false
-
-service:
-  type: NodePort
-  port: 80
-
 openmrs-backend:
   infinispan:
     clustered: true

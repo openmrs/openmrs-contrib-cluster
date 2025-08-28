@@ -159,7 +159,6 @@ podAnnotations: {}
 podLabels: {}
 
 podSecurityContext:
-  enabled: true
   fsGroup: 1001
   runAsUser: 1001
   fsGroupChangePolicy: "Always"

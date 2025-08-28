@@ -2,13 +2,14 @@ global:
   defaultStorageClass: standard
 openmrs-backend:
   image:
-    pullPolicy: Always #IfNotPresent #Always
+    pullPolicy: Always #IfNotPresent / Always
   elasticsearch:
     enabled: true
     master:
       replicaCount: 3
   minio:
     enabled: true
-
-
+openmrs-frontend:
+  image:
+    pullPolicy: Always #IfNotPresent / Always
 

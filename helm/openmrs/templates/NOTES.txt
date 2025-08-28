@@ -3,14 +3,14 @@ Congratulations! OpenMRS has been successfully deployed!
 It may take a few minutes for the OpenMRS application to be accessible. You can watch the status by running
 and waiting for all pods to be ready:
 
-kubectl get pods --namespace {{ .Release.Namespace }}
+kubectl get pods -n {{ .Release.Namespace }}
 
-To access the service run:
-  kubectl -n {{ .Release.Namespace }} port-forward svc/gateway 8080:80
+To access the service via Ingress Nginx run:
+   kubectl -n ingress-nginx port-forward svc/ingress-nginx-controller 8080:80
 
-NOTE: In case port-forward command does not work, make sure that OpenMRS Gateway name is correct.
-      Check the services in {{ .Release.Namespace }} namespace using:
-        kubectl -n {{ .Release.Namespace }} get svc
+NOTE: In case port-forward command does not work, make sure that Ingress Controller name is correct.
+      Check the services in Ingress Nginx (e.g. ingress-nginx) namespace using:
+        kubectl -n ingress-nginx get svc
 
 OpenMRS will be available at:
   http://localhost:8080
