@@ -3,6 +3,7 @@ global:
 openmrs-backend:
   image:
     pullPolicy: Always #IfNotPresent / Always
+  replicaCount: 2 # Enabled experimentally
   elasticsearch:
     enabled: true
     master:

@@ -137,8 +137,6 @@ minio:
         policies: ["readwrite"]
 
 imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: "backend" # Overwrite for now until gateway can be configured
 
 persistence:
   enabled: true

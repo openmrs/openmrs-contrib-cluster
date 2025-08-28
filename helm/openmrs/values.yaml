@@ -6,6 +6,8 @@ global:
   defaultStorageClass: "gp2"
 
 openmrs-backend:
+  nameOverride: "backend"
+
   infinispan:
     clustered: true
     bind_port: 7800
@@ -30,3 +32,5 @@ openmrs-backend:
       username: openmrs
       password: OpenMRS123
 
+openmrs-frontend:
+  nameOverride: "frontend"
