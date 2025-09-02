@@ -52,7 +52,7 @@ Make sure that Docker is running and issue the following commands:
       # Setup Kubernetes Dashboard
       brew install helm
       helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
-      helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard
+      helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard --set extraArgs="--token-ttl=0"
       # Create token for login
       kubectl -n kubernetes-dashboard create token admin-user
       kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
