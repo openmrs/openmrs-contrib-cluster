@@ -36,10 +36,15 @@ At this point we did not add support for AWS Fargate and AWS Aurora for Kubernet
 
 We recommend https://kind.sigs.k8s.io/ for local testing.
 
-Make sure that Docker is running and issue the following commands:
-
+To install on Mac OS:
 
       brew install kind
+
+Other install options: https://kind.sigs.k8s.io/docs/user/quick-start/#installing-from-release-binaries
+
+Make sure that Docker is running and issue the following commands:
+
+ 
       cd helm
       kind create cluster --config=kind-config.yaml
 
