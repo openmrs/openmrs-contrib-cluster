@@ -28,9 +28,9 @@ To install on Mac OS:
       brew install kind
 
 Other install options: 
-https://kubernetes.io/docs/tasks/tools/
-https://helm.sh/docs/intro/install
-https://kind.sigs.k8s.io/docs/user/quick-start/#installing-from-release-binaries
+1. https://kubernetes.io/docs/tasks/tools/
+2. https://helm.sh/docs/intro/install
+3. https://kind.sigs.k8s.io/docs/user/quick-start/#installing-from-release-binaries
 
 
 Make sure that Docker is running and issue the following commands:
