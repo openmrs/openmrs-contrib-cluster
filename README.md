@@ -38,9 +38,15 @@ We recommend https://kind.sigs.k8s.io/ for local testing.
 
 To install on Mac OS:
 
+      brew install kubectl
+      brew install helm
       brew install kind
 
-Other install options: https://kind.sigs.k8s.io/docs/user/quick-start/#installing-from-release-binaries
+Other install options: 
+https://kubernetes.io/docs/tasks/tools/
+https://helm.sh/docs/intro/install
+https://kind.sigs.k8s.io/docs/user/quick-start/#installing-from-release-binaries
+
 
 Make sure that Docker is running and issue the following commands:
 
@@ -55,7 +61,6 @@ Make sure that Docker is running and issue the following commands:
       kubectl apply -f kind-init.yaml
 
       # Setup Kubernetes Dashboard
-      brew install helm
       helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
       helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard --set extraArgs="--token-ttl=0"
       # Create token for login
