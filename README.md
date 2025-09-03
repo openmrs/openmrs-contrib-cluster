@@ -5,21 +5,6 @@ Terraform setup is borrowed from Bahmni https://github.com/Bahmni/bahmni-infra (
 
 ## Overview
 
-What's been implemented so far?
-
-1. Deploy mariadb primary and replica from bitnami/mariadb helm chart
-2. Deploy openmrs backend
-3. Deploy openmrs frontend and gateway
-4. Deploy to AWS with RDS or mariadb cluster using helm chart
-5. Use mariadb-galera cluster as an option to deploy.
-6. Deploy ALB with terraform
-
-What's coming next?
-
-1. Make changes in the openmrs-core to support mariadb-galera cluster and mariadb read-only replicas.
-2. Deploy Grafana for logging
-3. ...
-
 See https://openmrs.atlassian.net/wiki/x/tgBLCw for more details.
 
 ## Other options
