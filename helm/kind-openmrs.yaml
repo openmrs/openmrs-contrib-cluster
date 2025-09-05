@@ -1,16 +1,43 @@
 global:
   defaultStorageClass: standard
+  defaultIngressClass: nginx
 openmrs-backend:
   image:
+    repository: openmrs/openmrs-reference-application-3-backend
+    tag: nightly-core-2.8
     pullPolicy: Always #IfNotPresent / Always
   replicaCount: 2 # Enabled experimentally
+  infinispan:
+    clustered: true
+  galera:
+    enabled: true
+    replicaCount: 3
+    rootUser:
+      password: Root123
+    db:
+      name: openmrs
+      user: openmrs
+      password: OpenMRS123
+    galera:
+      mariabackup:
+        password: Backup123
+  mariadb:
+    enabled: false
   elasticsearch:
     enabled: true
     master:
       replicaCount: 3
   minio:
     enabled: true
+    auth:
+      rootPassword: Root1234
+    provisioning:
+      users:
+        - username: openmrs
+          password: OpenMRS123
+          policies: ["readwrite"]
 openmrs-frontend:
   image:
+    repository: openmrs/openmrs-reference-application-3-frontend
+    tag: nightly-core-2.8
     pullPolicy: Always #IfNotPresent / Always
-

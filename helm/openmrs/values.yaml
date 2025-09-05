@@ -4,12 +4,13 @@
 
 global:
   defaultStorageClass: "gp2"
+  defaultIngressClass: "nginx"
 
 openmrs-backend:
   nameOverride: "backend"
 
   infinispan:
-    clustered: true
+    clustered: false
     bind_port: 7800
 
   db:
@@ -23,14 +24,19 @@ openmrs-backend:
       name: openmrs
       user: openmrs
       password: OpenMRS123
+    galera:
+      mariabackup:
+        password: Backup123
 
   mariadb:
     enabled: true
     auth:
       rootPassword: Root123
+      replicationPassword: Replicate123
       database: openmrs
       username: openmrs
       password: OpenMRS123
 
 openmrs-frontend:
+  enabled: true
   nameOverride: "frontend"

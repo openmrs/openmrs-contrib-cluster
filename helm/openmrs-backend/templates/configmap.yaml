@@ -6,7 +6,12 @@ metadata:
     {{- include "openmrs-backend.labels" . | nindent 4 }}
 data:
   {{- if and (not .Values.mariadb.enabled) (not .Values.galera.enabled) }}
-  OMRS_DB_HOSTNAME: {{ .Values.db.hostname | quote}}
+  {{- if .Values.db.url }}
+  OMRS_DB_URL: {{ .Values.db.url | quote }}
+  {{- else }}
+  OMRS_DB_HOSTNAME: { { .Values.db.hostname | quote } }
+  OMRS_DB_PORT: { { .Values.db.port | quote } }
+  {{- end }}
   {{- end }}
   {{- if and .Values.mariadb.enabled .Values.galera.enabled }}
   {{- fail "You must not enable mariadb and galera at the same time." }}
@@ -23,6 +28,9 @@ data:
   {{- if .Values.elasticsearch.enabled }}
   OMRS_SEARCH: "elasticsearch"
   OMRS_SEARCH_ES_URIS: {{ include "openmrs-elasticsearch.url" . }}
+  {{- else if .Values.elasticsearch.uris }}
+  OMRS_SEARCH: "elasticsearch"
+  OMRS_SEARCH_ES_URIS: .Values.elasticsearch.uris
   {{- end }}
   {{- if .Values.minio.enabled }}
   storage.type: "s3"

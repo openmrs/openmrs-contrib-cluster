@@ -4,6 +4,7 @@
 
 global:
   defaultStorageClass: "gp2"
+  defaultIngressClass: "nginx"
 
 replicaCount: 1
 
@@ -14,11 +15,14 @@ image:
   tag: ""
 
 infinispan:
-  clustered: true
+  clustered: false
   bind_port: 7800
 
 db:
   hostname: mariadb
+  port: 3306
+  username: openmrs
+  password: OpenMRS123
 
 galera:
   enabled: false
@@ -39,6 +43,7 @@ mariadb:
     tag: 10.11
   auth:
     rootPassword: Root123
+    replicationPassword: Replicate123
     database: openmrs
     username: openmrs
     password: OpenMRS123

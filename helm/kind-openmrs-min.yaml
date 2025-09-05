@@ -1,8 +1,13 @@
 global:
   defaultStorageClass: standard
-openmrs-backend:
-  image:
-    pullPolicy: Always #IfNotPresent #Always
+  defaultIngessClass: nginx
+mariadb:
+  auth:
+    rootPassword: Root123
+    replicationPassword: Replicate123
+    database: openmrs
+    username: openmrs
+    password: OpenMRS123
 
 
 
