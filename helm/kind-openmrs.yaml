@@ -4,8 +4,8 @@ global:
 openmrs-backend:
   image:
     repository: openmrs/openmrs-reference-application-3-backend
-    tag: nightly-core-2.8
-    pullPolicy: Always #IfNotPresent / Always
+    tag: nightly-0-core-2.8
+    pullPolicy: IfNotPresent #IfNotPresent / Always
   replicaCount: 2 # Enabled experimentally
   infinispan:
     clustered: true
@@ -39,5 +39,5 @@ openmrs-backend:
 openmrs-frontend:
   image:
     repository: openmrs/openmrs-reference-application-3-frontend
-    tag: nightly-core-2.8
-    pullPolicy: Always #IfNotPresent / Always
+    tag: nightly-0-core-2.8
+    pullPolicy: IfNotPresent #IfNotPresent / Always
