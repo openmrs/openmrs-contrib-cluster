@@ -5,6 +5,8 @@
 global:
   defaultStorageClass: "gp2"
   defaultIngressClass: "nginx"
+  security:
+    allowInsecureImages: true
 
 replicaCount: 1
 
@@ -26,6 +28,9 @@ db:
 
 galera:
   enabled: false
+  image:
+    repository: bitnamilegacy/mariadb-galera
+    tag: 10.11
   rootUser:
     password: Root123
   db:
@@ -37,10 +42,11 @@ galera:
       password: Backup123
 
 mariadb:
-  architecture: replication
   enabled: true
   image:
+    repository: bitnamilegacy/mariadb
     tag: 10.11
+  architecture: replication
   auth:
     rootPassword: Root123
     replicationPassword: Replicate123
@@ -59,6 +65,14 @@ mariadb:
 
 elasticsearch:
   enabled: false
+  image:
+    repository: bitnamilegacy/elasticsearch
+    tag: 9.1.2
+  volumePermissions:
+    image:
+      repository: bitnamilegacy/os-shell
+  sysctlImage:
+    repository: bitnamilegacy/os-shell
   service:
     ports:
       restAPI: 9200
@@ -125,6 +139,18 @@ elasticsearch:
 
 minio:
   enabled: false
+  image:
+    repository: bitnamilegacy/minio
+    tag: 2025.7.23
+  clientImage:
+    repository: bitnamilegacy/minio-client
+  defaultInitContainers:
+    volumePermissions:
+      image:
+        repository: bitnamilegacy/os-shell
+  console:
+    image:
+      repository: bitnamilegacy/minio-object-browser
   mode: distributed
   auth:
     rootPassword: Root1234
@@ -197,17 +223,13 @@ ingress:
   #    hosts:
   #      - chart-example.local
 
-resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
+resources:
+  limits:
+     cpu: 1.0
+     memory: 2Gi
+  requests:
+     cpu: 200m
+     memory: 1536Mi
 
 livenessProbe:
   httpGet:

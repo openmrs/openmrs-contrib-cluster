@@ -15,32 +15,32 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 1.0.0
+version: 1.1.0
 
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "nightly-0-core-2.8"
+appVersion: "nightly-core-2.8"
 
 dependencies:
   - name: mariadb
     version: 22.0.0
-    repository: https://charts.bitnami.com/bitnami
+    repository: https://docker.io/bitnamilegacy
     condition: mariadb.enabled
 
   - name: mariadb-galera
     version: 16.0.0
-    repository: https://charts.bitnami.com/bitnami
+    repository: https://docker.io/bitnamilegacy
     condition: galera.enabled
     alias: galera
 
   - name: elasticsearch
     version: 22.0.0
-    repository: https://charts.bitnami.com/bitnami
+    repository: https://docker.io/bitnamilegacy
     condition: elasticsearch.enabled
 
   - name: minio
     version: 17.0.16
-    repository: https://charts.bitnami.com/bitnami
+    repository: https://docker.io/bitnamilegacy
     condition: minio.enabled
