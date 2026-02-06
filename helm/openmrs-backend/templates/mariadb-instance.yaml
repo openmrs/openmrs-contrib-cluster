@@ -1,0 +1,21 @@
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: MariaDB
+metadata:
+  name: openmrs-db
+spec:
+  image: mariadb:10.11.6
+
+  storage:
+    size: 10Gi
+
+  rootPasswordSecretKeyRef:
+    name: mariadb-root-password
+    key: password
+
+  database: openmrs
+  username: openmrs
+  passwordSecretKeyRef:
+    name: mariadb-user-password
+    key: password
+
+  port: 3306

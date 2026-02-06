@@ -63,6 +63,9 @@ mariadb:
       enabled: true
       size: 8Gi
 
+mariadb-operator:
+  enabled: false
+
 elasticsearch:
   enabled: false
   image:
