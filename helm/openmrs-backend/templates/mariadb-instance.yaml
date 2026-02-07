@@ -1,12 +1,12 @@
 apiVersion: k8s.mariadb.com/v1alpha1
 kind: MariaDB
 metadata:
-  name: openmrs-db
+  name: {{ .Release.Name }}-mariadb
 spec:
-  image: mariadb:10.11.6
+  image: {{ .Values.mariadb.image.repository | default "mariadb" }}:{{ .Values.mariadb.image.tag | default "10.11.6" }}
 
   storage:
-    size: 10Gi
+    size: {{ .Values.mariadb.primary.persistence.size | default "10Gi" }}
 
   rootPasswordSecretKeyRef:
     name: mariadb-root-password
@@ -19,3 +19,24 @@ spec:
     key: password
 
   port: 3306
+
+  {{- if eq .Values.mariadb.architecture "replication" }}
+  replicas: 3
+  replication:
+    enabled: true
+    primary:
+      podIndex: 0
+      automaticFailover: true
+    probes:
+      enabled: true
+
+  {{- else if .Values.galera.enabled }}
+  replicas: 3
+  galera:
+    enabled: true
+    sst: mariabackup
+    replicaThreads: 1
+
+  {{- else }}
+  replicas: 1
+  {{- end }}
