@@ -26,9 +26,6 @@ spec:
     enabled: true
     primary:
       podIndex: 0
-      automaticFailover: true
-    probes:
-      enabled: true
 
   {{- else if .Values.galera.enabled }}
   replicas: 3

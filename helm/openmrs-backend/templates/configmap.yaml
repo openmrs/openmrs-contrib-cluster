@@ -9,7 +9,7 @@ data:
   {{- if $operatorEnabled }}
   OMRS_DB: "mariadb"
   OMRS_DB_NAME: "openmrs"
-  OMRS_DB_HOSTNAME: "openmrs-db"
+  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb"
   {{- else if .Values.mariadb.enabled }}
   OMRS_DB: "mariadb"
   OMRS_DB_NAME: {{ .Values.mariadb.auth.database | quote }}

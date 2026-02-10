@@ -25,7 +25,6 @@ appVersion: "nightly-core-2.8"
 
 dependencies:
   - name: mariadb-operator
-    alias: mariadbOperator
     version: 25.10.4
     repository: https://helm.mariadb.com/mariadb-operator
     condition: mariadb-operator.enabled
