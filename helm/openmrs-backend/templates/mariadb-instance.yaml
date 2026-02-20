@@ -37,3 +37,7 @@ spec:
   {{- else }}
   replicas: 1
   {{- end }}
+  myCnf: |
+    [mariadb]
+    max_connections = 200
+    max_user_connections = 150

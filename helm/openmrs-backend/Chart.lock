@@ -2,5 +2,5 @@ dependencies:
 - name: mariadb-operator
   repository: https://helm.mariadb.com/mariadb-operator
   version: 25.10.4
-digest: sha256:376957ef5a439c84ac8a7aafdad5b6b2cbade1665afecb3495809c9d7706619a
-generated: "2026-02-07T15:31:44.8237534+05:30"
+digest: sha256:77015ec7c9d8bed7377377864e7e5d0b9d7f22ca23afbed74d1fa88be81e2798
+generated: "2026-02-17T18:31:51.4716919+05:30"

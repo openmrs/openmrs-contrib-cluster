@@ -13,7 +13,7 @@ data:
   {{- else if .Values.mariadb.enabled }}
   OMRS_DB: "mariadb"
   OMRS_DB_NAME: {{ .Values.mariadb.auth.database | quote }}
-  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb-headless"
+  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb-primary"
   {{- else if .Values.galera.enabled }}
   OMRS_DB: "mariadb"
   OMRS_DB_NAME: {{ .Values.galera.db.name | quote }}
