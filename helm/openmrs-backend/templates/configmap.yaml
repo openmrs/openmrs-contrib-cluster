@@ -5,25 +5,26 @@ metadata:
   labels:
     {{- include "openmrs-backend.labels" . | nindent 4 }}
 data:
-  {{- if and (not .Values.mariadb.enabled) (not .Values.galera.enabled) }}
-  {{- if .Values.db.url }}
-  OMRS_DB_URL: {{ .Values.db.url | quote }}
-  {{- else }}
-  OMRS_DB_HOSTNAME: { { .Values.db.hostname | quote } }
-  OMRS_DB_PORT: { { .Values.db.port | quote } }
-  {{- end }}
-  {{- end }}
-  {{- if and .Values.mariadb.enabled .Values.galera.enabled }}
-  {{- fail "You must not enable mariadb and galera at the same time." }}
-  {{- end }}
-  {{- if .Values.mariadb.enabled }}
+  {{- $operatorEnabled := index .Values "mariadb-operator" "enabled" | default false }}
+  {{- if $operatorEnabled }}
+  OMRS_DB: "mariadb"
+  OMRS_DB_NAME: "openmrs"
+  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb"
+  {{- else if .Values.mariadb.enabled }}
   OMRS_DB: "mariadb"
   OMRS_DB_NAME: {{ .Values.mariadb.auth.database | quote }}
-  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb-headless"
+  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb-primary"
   {{- else if .Values.galera.enabled }}
   OMRS_DB: "mariadb"
   OMRS_DB_NAME: {{ .Values.galera.db.name | quote }}
   OMRS_DB_HOSTNAME: "{{ .Release.Name }}-galera-headless"
+  {{- else }}
+  {{- if .Values.db.url }}
+  OMRS_DB_URL: {{ .Values.db.url | quote }}
+  {{- else }}
+  OMRS_DB_HOSTNAME: {{ .Values.db.hostname | quote }}
+  OMRS_DB_PORT: {{ .Values.db.port | quote }}
+  {{- end }}
   {{- end }}
   {{- if .Values.elasticsearch.enabled }}
   OMRS_SEARCH: "elasticsearch"

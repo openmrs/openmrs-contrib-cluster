@@ -49,34 +49,34 @@ spec:
             - |
               echo "Resolving MariaDB hosts..."
               HOSTS=""
+              NAMESPACE="{{ .Release.Namespace }}"
+
               {{ if .Values.galera.enabled }}
-              SERVICE={{ .Release.Name }}-galera
+              # Legacy Galera logic (Bitnami)
+              SERVICE="{{ .Release.Name }}-galera"
               STATEFULSET=$SERVICE
-              {{ end }}
-              {{ if .Values.mariadb.enabled }}
-              SERVICE={{ .Release.Name }}-mariadb
-              STATEFULSET=$SERVICE-secondary
-              {{ end }}
-              REPLICA_COUNT=$(kubectl get statefulset $STATEFULSET -n {{ .Release.Namespace }} -o jsonpath='{.spec.replicas}')
-              {{ if .Values.mariadb.enabled }}
-              # Add primary instance
-              HOSTS="$SERVICE-primary-0.${SERVICE}-headless.{{ .Release.Namespace }}.svc.cluster.local"
-              {{ end }}
+              REPLICA_COUNT=$(kubectl get statefulset $STATEFULSET -n $NAMESPACE -o jsonpath='{.spec.replicas}')
               for i in $(seq 0 $((REPLICA_COUNT-1))); do
-                POD_FQDN="$STATEFULSET-${i}.${SERVICE}-headless.{{ .Release.Namespace }}.svc.cluster.local"
-              
-                # Append to HOSTS, separated by comma
+                POD_FQDN="$STATEFULSET-${i}.${SERVICE}-headless.${NAMESPACE}.svc.cluster.local"
                 if [ -z "$HOSTS" ]; then
                   HOSTS="$POD_FQDN"
                 else
                   HOSTS="$HOSTS,$POD_FQDN"
                 fi
               done
-              {{ if .Values.galera.enabled }}
-                MODE="loadbalance"
-              {{ else }}
-                MODE="replication"
+              MODE="loadbalance"
+
+              {{ else if .Values.mariadb.enabled }}
+              # New MariaDB Operator logic (Static ClusterIP Services)
+              SERVICE="{{ .Release.Name }}-mariadb"
+              PRIMARY_HOST="$SERVICE-primary.$NAMESPACE.svc.cluster.local"
+              SECONDARY_HOST="$SERVICE-secondary.$NAMESPACE.svc.cluster.local"
+
+              HOSTS="$PRIMARY_HOST,$SECONDARY_HOST"
+              MODE="replication"
+
               {{ end }}
+
               echo "jdbc:mariadb:$MODE://$HOSTS:3306/$OMRS_DB_NAME?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8" > /work-dir/jdbc-url.txt
               echo "JDBC URL written: $(cat /work-dir/jdbc-url.txt)"
           volumeMounts:
