@@ -51,7 +51,7 @@ Make sure that Docker is running and issue the following commands:
       # Create token for login
       kubectl -n kubernetes-dashboard create token admin-user
       kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
-      # Go to http://localhost:8443/ and login with generated token
+      # Go to https://localhost:8443/ and login with generated token
 
 How to try it out?
 

@@ -1,15 +1,24 @@
 dependencies:
 - name: mariadb
-  repository: https://charts.bitnami.com/bitnami
+  repository: oci://registry-1.docker.io/bitnamicharts
   version: 22.0.0
 - name: mariadb-galera
-  repository: https://charts.bitnami.com/bitnami
+  repository: oci://registry-1.docker.io/bitnamicharts
   version: 16.0.0
 - name: elasticsearch
-  repository: https://charts.bitnami.com/bitnami
+  repository: oci://registry-1.docker.io/bitnamicharts
   version: 22.0.0
 - name: minio
-  repository: https://charts.bitnami.com/bitnami
+  repository: oci://registry-1.docker.io/bitnamicharts
   version: 17.0.16
-digest: sha256:620e64f803e048f02737a5e7d766ef78b190f38829e47bc47caaebf5dc11b19b
-generated: "2025-08-20T14:18:28.262096+02:00"
+- name: grafana
+  repository: https://grafana.github.io/helm-charts
+  version: 10.5.15
+- name: loki
+  repository: https://grafana.github.io/helm-charts
+  version: 6.53.0
+- name: alloy
+  repository: https://grafana.github.io/helm-charts
+  version: 1.6.0
+digest: sha256:fecbebad86d03f7f809de796b3b343e66bc93565e801488098ab08abfd53ecb8
+generated: "2026-02-19T14:43:51.765279+01:00"

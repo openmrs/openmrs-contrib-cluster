@@ -15,7 +15,7 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 1.1.0
+version: 1.2.0
 
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
@@ -26,21 +26,36 @@ appVersion: "nightly-core-2.8"
 dependencies:
   - name: mariadb
     version: 22.0.0
-    repository: https://docker.io/bitnamilegacy
+    repository: oci://registry-1.docker.io/bitnamicharts
     condition: mariadb.enabled
 
   - name: mariadb-galera
     version: 16.0.0
-    repository: https://docker.io/bitnamilegacy
+    repository: oci://registry-1.docker.io/bitnamicharts
     condition: galera.enabled
     alias: galera
 
   - name: elasticsearch
     version: 22.0.0
-    repository: https://docker.io/bitnamilegacy
+    repository: oci://registry-1.docker.io/bitnamicharts
     condition: elasticsearch.enabled
 
   - name: minio
     version: 17.0.16
-    repository: https://docker.io/bitnamilegacy
+    repository: oci://registry-1.docker.io/bitnamicharts
     condition: minio.enabled
+
+  - name: grafana
+    version: 10.5.15
+    repository: https://grafana.github.io/helm-charts
+    condition: monitoring.enabled
+
+  - name: loki
+    version: 6.53.0
+    repository: https://grafana.github.io/helm-charts
+    condition: monitoring.enabled
+
+  - name: alloy
+    version: 1.6.0
+    repository: https://grafana.github.io/helm-charts
+    condition: monitoring.enabled

@@ -9,8 +9,8 @@ data:
   {{- if .Values.db.url }}
   OMRS_DB_URL: {{ .Values.db.url | quote }}
   {{- else }}
-  OMRS_DB_HOSTNAME: { { .Values.db.hostname | quote } }
-  OMRS_DB_PORT: { { .Values.db.port | quote } }
+  OMRS_DB_HOSTNAME: {{ .Values.db.hostname | quote }}
+  OMRS_DB_PORT: {{ .Values.db.port | quote }}
   {{- end }}
   {{- end }}
   {{- if and .Values.mariadb.enabled .Values.galera.enabled }}

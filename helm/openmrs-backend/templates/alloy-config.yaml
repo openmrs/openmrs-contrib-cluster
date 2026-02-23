@@ -1,0 +1,93 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alloy-config
+  labels:
+    {{- include "openmrs-backend.labels" . | nindent 4 }}
+data:
+  config.alloy: |
+    logging {
+      level = "warn"
+      format = "logfmt"
+    }
+
+    discovery.kubernetes "pods" {
+      role = "pod"
+    }
+
+    discovery.relabel "pods" {
+      targets = discovery.kubernetes.pods.targets
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        action = "keep"
+        regex = {{ .Release.Namespace | quote }}
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_container_name"]
+        target_label  = "service"
+      }
+      rule {
+        target_label = "job"
+        replacement  = "docker"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+    }
+
+    loki.source.kubernetes "pods" {
+      targets    = discovery.relabel.pods.output
+      forward_to = [loki.process.default.receiver]
+    }
+
+    loki.process "default" {
+      forward_to = [loki.write.default.receiver]
+
+      stage.drop {
+        expression = ".*(msg=\\\"(error notifying scheduler about finished query|error processing requests from scheduler|error health checking|error notifying frontend about finished query|error getting ingester clients)\\\"|msg=\\\"write operation failed\\\" details=\\\"entry too far behind).*"
+      }
+
+      stage.multiline {
+        firstline = "^(?i)\\s*((\\d{4}-\\d{2}-\\d{2}|\\d{2}-[a-z]{3}-\\d{4})|(\\[?(trace|debug|info|warning|warn|error|fatal|panic|note)\\]?))"
+        max_wait_time = "3s"
+        max_lines = 512
+      }
+
+      stage.regex {
+        expression = "(?i)(?P<level>trace|debug|info|warning|warn|error|fatal|panic|note)"
+      }
+
+      stage.labels {
+        values = { level = "level" }
+      }
+
+      stage.match {
+        selector = "{level=~\"(?i)warn(ing)?\"}"
+        stage.static_labels {
+          values = { level = "warn" }
+        }
+      }
+
+      stage.match {
+        selector = "{level=~\"(?i)(info|note)\"}"
+        stage.static_labels {
+          values = { level = "info" }
+        }
+      }
+
+      stage.match {
+        selector = "{level=~\"(?i)(error|fatal|panic)\"}"
+        stage.static_labels {
+          values = { level = "error" }
+        }
+      }
+    }
+
+    loki.write "default" {
+      endpoint {
+        url = "http://{{ .Release.Name }}-loki.{{ .Release.Namespace }}.svc.cluster.local:3100/loki/api/v1/push"
+      }
+    }
+{{- end }}

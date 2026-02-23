@@ -260,3 +260,103 @@ autoscaling:
   maxReplicas: 100
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
+
+
+# Monitoring of logs & metrics
+monitoring:
+  enabled: false
+
+grafana:
+  adminPassword: "Admin123"
+  grafana.ini: # Needed for serving from path
+    server:
+      domain: localhost
+      root_url: "%(protocol)s://%(domain)s/grafana"
+      serve_from_sub_path: true
+    dashboards:
+      default_home_dashboard_path: /var/lib/grafana/dashboards/default/logs-dashboard.json
+    log:
+      level: warn
+    dataproxy:
+      timeout: 300
+      keep_alive_seconds: 300
+  ingress:
+    enabled: true
+    hosts:
+      - "localhost"
+    path: '/grafana'
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Loki
+          type: loki
+          url: "http://{{ .Release.Name }}-loki.{{ .Release.Namespace }}.svc.cluster.local:3100"
+          access: proxy
+          isDefault: true
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'default'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+  dashboardsConfigMaps:
+    default: "logs-dashboard"
+
+loki:
+  deploymentMode: SingleBinary
+  # Explicitly disable scalable targets to satisfy validation when using filesystem storage
+  read:
+    replicas: 0
+  write:
+    replicas: 0
+  backend:
+    replicas: 0
+  singleBinary:
+    replicas: 1
+    persistence:
+      enabled: true
+      size: 10Gi
+  test:
+    enabled: false
+  lokiCanary:
+    enabled: false
+  loki:
+    auth_enabled: false
+    commonConfig:
+      replication_factor: 1
+    server:
+      log_level: warn
+      http_server_read_timeout: 300s
+      http_server_write_timeout: 300s
+    limits_config:
+      retention_period: 14d
+      query_timeout: 300s
+    compactor:
+      retention_enabled: true
+      delete_request_store: filesystem
+    storage:
+      type: 'filesystem'
+    schemaConfig:
+      configs:
+        - from: "2024-01-01"
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+
+alloy:
+  alloy:
+    configMap:
+      create: false
+      name: alloy-config
+  controller:
+    type: daemonset

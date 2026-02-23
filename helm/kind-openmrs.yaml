@@ -9,6 +9,8 @@ openmrs-backend:
   replicaCount: 2 # Enabled experimentally
   infinispan:
     clustered: true
+  monitoring:
+    enabled: true
   galera:
     enabled: true
     replicaCount: 3
