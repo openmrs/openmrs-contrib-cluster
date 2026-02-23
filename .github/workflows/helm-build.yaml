@@ -20,6 +20,10 @@ jobs:
         with:
           version: v3.14.2
 
+      - name: Add Helm Repositories
+        run: |
+          helm repo add grafana https://grafana.github.io/helm-charts
+
       - name: Lint Subcharts
         run: |
           helm lint helm/openmrs-backend
