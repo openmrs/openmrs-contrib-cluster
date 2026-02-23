@@ -55,8 +55,12 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           git add helm/**/Chart.yaml helm/**/Chart.lock
-          git commit -m "Bump chart versions to ${{ github.event.inputs.version }}"
-          git push
+          if [[ -n $(git status --porcelain) ]]; then
+            git commit -m "Bump chart versions to ${{ github.event.inputs.version }}"
+            git push
+          else
+            echo "No changes to commit"
+          fi
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.7.0
