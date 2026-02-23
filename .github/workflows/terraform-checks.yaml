@@ -1,0 +1,48 @@
+name: Terraform Checks
+
+on:
+  push:
+    paths:
+      - 'terraform/**'
+  pull_request:
+    paths:
+      - 'terraform/**'
+
+jobs:
+  terraform-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+
+      - name: Setup TFSec
+        run: |
+          curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+
+      - name: Setup Terrascan
+        run: |
+          TERRASCAN_URL=$(curl -s https://api.github.com/repos/tenable/terrascan/releases/latest | jq -r '.assets[] | select(.name | contains("Linux_x86_64.tar.gz")) | .browser_download_url')
+          curl -L $TERRASCAN_URL -o terrascan.tar.gz
+          tar -xf terrascan.tar.gz terrascan && rm terrascan.tar.gz
+          sudo mv terrascan /usr/local/bin/terrascan
+
+      - name: Run Terrascan
+        run: |
+          chmod +x ./terraform/terrascan/terrascan.sh
+          ./terraform/terrascan/terrascan.sh
+
+      - name: Run TFLint
+        run: |
+          chmod +x ./terraform/tflint/tflint.sh
+          ./terraform/tflint/tflint.sh
+
+      - name: Run TFSec
+        run: |
+          chmod +x ./terraform/tfsec/tfsec.sh
+          ./terraform/tfsec/tfsec.sh
