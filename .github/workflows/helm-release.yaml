@@ -64,15 +64,6 @@ jobs:
           git tag "v${{ github.event.inputs.version }}"
           git push origin "v${{ github.event.inputs.version }}"
 
-      - name: Update Chart.yaml dependencies
-        run: |
-          # Replace local file paths with the GitHub Pages URL for the release
-          REPO_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
-          sed -i "s|repository: \"file://../openmrs-backend\"|repository: \"$REPO_URL\"|g" helm/openmrs/Chart.yaml
-          sed -i "s|repository: \"file://../openmrs-frontend\"|repository: \"$REPO_URL\"|g" helm/openmrs/Chart.yaml
-          # Remove Chart.lock because it is now out of sync with Chart.yaml (remote vs local)
-          rm helm/openmrs/Chart.lock
-
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.7.0
         with:
