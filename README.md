@@ -254,7 +254,21 @@ dependencies and run helm upgrade.
       helm dependency update
       helm upgrade openmrs .
 
-### Releasing Helm Charts
+### Releasing from Github Actions
+
+1. Go to the "Actions" tab in the GitHub repository.
+2. Select the "Release Charts" workflow from the left sidebar.
+3. Click the "Run workflow" dropdown button.
+4. Enter the desired version (e.g., `1.2.2`) in the "Chart version" input field.
+5. Click the green "Run workflow" button.
+
+This will:
+- Update the version in `Chart.yaml` files.
+- Commit and push the changes.
+- Create a git tag.
+- Package and release the charts to GitHub Pages.
+
+### Releasing Helm Charts Manually
 
       PACKAGE_VERSION=1.0.0 # same as in Chart.yaml
       helm registry login ghcr.io -u YOUR_GITHUB_USER
@@ -268,7 +282,6 @@ dependencies and run helm upgrade.
       cd ../openmrs
       helm package .
       helm push openmrs-$PACKAGE_VERSION.tgz oci://ghcr.io/openmrs/
-
 
 ## Directory Structure
 ```
