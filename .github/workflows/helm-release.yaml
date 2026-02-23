@@ -1,9 +1,11 @@
 name: Release Charts
 
 on:
-  push:
-    branches:
-      - release
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Chart version (e.g. 1.2.1)"
+        required: true
 
 jobs:
   release:
@@ -30,11 +32,37 @@ jobs:
         run: |
           helm repo add grafana https://grafana.github.io/helm-charts
 
+      - name: Set Chart Version
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+        run: |
+          # Update version in Chart.yaml files
+          sed -i "s/^version: .*/version: $VERSION/" helm/openmrs/Chart.yaml
+          sed -i "s/^version: .*/version: $VERSION/" helm/openmrs-backend/Chart.yaml
+          sed -i "s/^version: .*/version: $VERSION/" helm/openmrs-frontend/Chart.yaml
+          # Update dependency versions in main chart
+          sed -i "/name: openmrs-backend/,/version:/ s/version: .*/version: $VERSION/" helm/openmrs/Chart.yaml
+          sed -i "/name: openmrs-frontend/,/version:/ s/version: .*/version: $VERSION/" helm/openmrs/Chart.yaml
+
       - name: Build dependencies
         run: |
           helm dependency update helm/openmrs-backend
           helm dependency update helm/openmrs-frontend
           helm dependency update helm/openmrs
+
+      - name: Commit and Push Changes
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git add helm/**/Chart.yaml helm/**/Chart.lock
+          git commit -m "Bump chart versions to ${{ github.event.inputs.version }}"
+          git push
+
+      - name: Create Tag
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git tag "v${{ github.event.inputs.version }}"
+          git push origin "v${{ github.event.inputs.version }}"
 
       - name: Update Chart.yaml dependencies
         run: |
