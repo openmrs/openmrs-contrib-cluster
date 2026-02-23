@@ -3,6 +3,24 @@ entries:
   openmrs:
   - apiVersion: v2
     appVersion: nightly-0-core-2.8
+    created: "2026-02-23T13:58:31.247797327Z"
+    dependencies:
+    - name: openmrs-backend
+      repository: file://../openmrs-backend
+      version: 1.2.2
+    - condition: openmrs-frontend.enabled
+      name: openmrs-frontend
+      repository: file://../openmrs-frontend
+      version: 1.2.2
+    description: OpenMRS Helm chart for Kubernetes
+    digest: 73b79c957a668bd25d95a47d7815c3b246ff8e525b6b9dfb3b5be90644b53ab1
+    name: openmrs
+    type: application
+    urls:
+    - https://github.com/openmrs/openmrs-contrib-cluster/releases/download/openmrs-1.2.2/openmrs-1.2.2.tgz
+    version: 1.2.2
+  - apiVersion: v2
+    appVersion: nightly-0-core-2.8
     created: "2026-02-23T13:18:29.988671053Z"
     dependencies:
     - name: openmrs-backend
@@ -20,6 +38,46 @@ entries:
     - https://github.com/openmrs/openmrs-contrib-cluster/releases/download/openmrs-1.2.0/openmrs-1.2.0.tgz
     version: 1.2.0
   openmrs-backend:
+  - apiVersion: v2
+    appVersion: nightly-core-2.8
+    created: "2026-02-23T13:58:31.449094784Z"
+    dependencies:
+    - condition: mariadb.enabled
+      name: mariadb
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 22.0.0
+    - alias: galera
+      condition: galera.enabled
+      name: mariadb-galera
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.0.0
+    - condition: elasticsearch.enabled
+      name: elasticsearch
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 22.0.0
+    - condition: minio.enabled
+      name: minio
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 17.0.16
+    - condition: monitoring.enabled
+      name: grafana
+      repository: https://grafana.github.io/helm-charts
+      version: 10.5.15
+    - condition: monitoring.enabled
+      name: loki
+      repository: https://grafana.github.io/helm-charts
+      version: 6.53.0
+    - condition: monitoring.enabled
+      name: alloy
+      repository: https://grafana.github.io/helm-charts
+      version: 1.6.0
+    description: OpenMRS Backend Helm chart for Kubernetes
+    digest: 93612899723338aca355375a0ed7096cbd1dbccb316b79edbf2f55c6f95a7f0c
+    name: openmrs-backend
+    type: application
+    urls:
+    - https://github.com/openmrs/openmrs-contrib-cluster/releases/download/openmrs-backend-1.2.2/openmrs-backend-1.2.2.tgz
+    version: 1.2.2
   - apiVersion: v2
     appVersion: nightly-core-2.8
     created: "2026-02-23T13:18:30.278917813Z"
@@ -63,6 +121,16 @@ entries:
   openmrs-frontend:
   - apiVersion: v2
     appVersion: nightly-0-core-2.8
+    created: "2026-02-23T13:58:31.605779468Z"
+    description: OpenMRS Frontend Helm chart for Kubernetes
+    digest: 91c88cca1379235e5e0898cc2cc79d4a9d9d2bd453de13b295261eef0961b848
+    name: openmrs-frontend
+    type: application
+    urls:
+    - https://github.com/openmrs/openmrs-contrib-cluster/releases/download/openmrs-frontend-1.2.2/openmrs-frontend-1.2.2.tgz
+    version: 1.2.2
+  - apiVersion: v2
+    appVersion: nightly-0-core-2.8
     created: "2026-02-23T13:18:30.498380311Z"
     description: A Helm chart for Kubernetes
     digest: 13704cb903b485c80970e4aea98fb801022e844e581043b28216bda4fdd966bd
@@ -71,4 +139,4 @@ entries:
     urls:
     - https://github.com/openmrs/openmrs-contrib-cluster/releases/download/openmrs-frontend-1.2.0/openmrs-frontend-1.2.0.tgz
     version: 1.2.0
-generated: "2026-02-23T13:18:30.498386332Z"
+generated: "2026-02-23T13:58:31.60579612Z"
