@@ -46,7 +46,7 @@ Make sure that Docker is running and issue the following commands:
       kubectl apply -f kind-init.yaml
 
       # Setup Kubernetes Dashboard
-      helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
+      helm repo add kubernetes-dashboard https://kubernetes-retired.github.io/dashboard/
       helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard --set extraArgs="--token-ttl=0"
       # Create token for login
       kubectl -n kubernetes-dashboard create token admin-user
@@ -61,11 +61,13 @@ From local source:
 
 or from registry:
 
-      helm upgrade --install --create-namespace -n openmrs --set global.defaultStorageClass=standard --set global.defaultIngressClass=nginx openmrs oci://ghcr.io/openmrs/openmrs
+      helm repo add openmrs https://openmrs.github.io/openmrs-contrib-cluster/
+
+      helm upgrade --install --create-namespace -n openmrs --set global.defaultStorageClass=standard --set global.defaultIngressClass=nginx openmrs openmrs/openmrs
 
 or if you want to use mariadb-galera cluster instead of mariadb with basic primary-secondary replication:
 
-      helm upgrade --install --create-namespace -n openmrs --set global.defaultStorageClass=standard --set global.defaultIngressClass=nginx --set openmrs-backend.mariadb.enabled=false --set openmrs-backend.galera.enabled=true openmrs oci://ghcr.io/openmrs/openmrs
+      helm upgrade --install --create-namespace -n openmrs --set global.defaultStorageClass=standard --set global.defaultIngressClass=nginx --set openmrs-backend.mariadb.enabled=false --set openmrs-backend.galera.enabled=true openmrs openmrs/openmrs
 
 
 Once installed you will see instructions on how to configure port-forwarding and access the instance. If you deploy to a cloud provider you will need to adjust the ingress configuration per https://kubernetes.github.io/ingress-nginx/deploy/#cloud-deployments
@@ -273,21 +275,6 @@ This will:
 - Commit and push the changes.
 - Create a git tag.
 - Package and release the charts to GitHub Pages.
-
-### Releasing Helm Charts Manually
-
-      PACKAGE_VERSION=1.0.0 # same as in Chart.yaml
-      helm registry login ghcr.io -u YOUR_GITHUB_USER
-      # As password provide personal access token
-      cd openmrs-backend
-      helm package .
-      helm push openmrs-backend-$PACKAGE_VERSION.tgz oci://ghcr.io/openmrs/
-      cd ../openmrs-frontend
-      helm package .
-      helm push openmrs-frontend-$PACKAGE_VERSION.tgz oci://ghcr.io/openmrs/
-      cd ../openmrs
-      helm package .
-      helm push openmrs-$PACKAGE_VERSION.tgz oci://ghcr.io/openmrs/
 
 ## Directory Structure
 ```
