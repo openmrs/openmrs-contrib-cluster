@@ -129,10 +129,16 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `op
 | `openmrs-backend.elasticsearch.ingest.replicaCount`              | No of replicas of Ingest node                                                                                          | `"0"`                                                     |
 | `openmrs-backend.elasticsearch.ingest.heapSize`                  | Elasticsearch ingest-eligible node heap size                                                                           | `"128m"`                                                  |
 | `openmrs-backend.elasticsearch.ingest.resources`                 | Set container requests and limits for different resources like CPU or memory <br/>(essential for production workloads) | `"{}"`                                                    |
+| `openmrs-backend.monitoring.enabled`                             | Enable monitoring (Grafana, Loki, Alloy)                                                                               | `"false"`                                                 |
+| `openmrs-backend.grafana.adminPassword`                          | Grafana admin password                                                                                                 | `"Admin123"`                                              |
+| `openmrs-backend.grafana.ingress.enabled`                        | Enable ingress for Grafana                                                                                             | `"true"`                                                  |
+| `openmrs-backend.grafana.ingress.hosts`                          | Hosts for Grafana ingress                                                                                              | `["localhost"]`                                           |
 
 See [MariaDB](https://github.com/bitnami/charts/blob/main/bitnami/mariadb/README.md) helm chart for other MariaDB parameters.
 
 See [ElasticSearch](https://github.com/bitnami/charts/blob/main/bitnami/elasticsearch/README.md) helm chart for other ElasticSearch parameters.
+
+See [Grafana](https://github.com/grafana-community/helm-charts/blob/main/charts/grafana/README.md), [Loki](https://github.com/grafana/loki/blob/main/production/helm/loki/README.md) and [Alloy](https://github.com/grafana/alloy/blob/main/operations/helm/charts/alloy/README.md) helm charts for other Grafana parameters.
 
 ### Terraform and AWS
 
