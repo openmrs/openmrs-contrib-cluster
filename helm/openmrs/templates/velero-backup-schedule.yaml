@@ -1,0 +1,99 @@
+{{- if .Values.backup.enabled }}
+# Velero backup credentials secret 
+# Stores AWS credentials securely as a Kubernetes secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Release.Name }}-velero-credentials
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  cloud: |
+    [default]
+    aws_access_key_id={{ .Values.backup.credentials.accessKey }}
+    aws_secret_access_key={{ .Values.backup.credentials.secretKey }}
+---
+# Velero BackupStorageLocation — tells Velero where to store backups (TRUNK-6608)
+apiVersion: velero.io/v1
+kind: BackupStorageLocation
+metadata:
+  name: {{ .Release.Name }}-backup-location
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+spec:
+  provider: aws
+  objectStorage:
+    bucket: {{ .Values.backup.bucket }}
+  config:
+    region: {{ .Values.backup.region }}
+    s3ForcePathStyle: "true"
+  credential:
+    name: {{ .Release.Name }}-velero-credentials
+    key: cloud
+---
+# Velero Schedule — daily backup of this OpenMRS namespace 
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: {{ .Release.Name }}-daily-backup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  useOwnerReferencesInBackup: false
+  template:
+    ttl: {{ .Values.backup.ttl | quote }}
+    storageLocation: {{ .Release.Name }}-backup-location
+    includedNamespaces:
+      - {{ .Release.Namespace }}
+    hooks:
+      resources:
+        {{- if .Values.openmrs-backend.mariadb.enabled }}
+        # Pre-backup hook — flush MariaDB to a dump file before backup starts
+        - name: mariadb-backup-hook
+          includedNamespaces:
+            - {{ .Release.Namespace }}
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: mariadb
+          pre:
+            - exec:
+                container: mariadb
+                command:
+                  - /bin/sh
+                  - -c
+                  - >
+                    mysqldump
+                    -u root
+                    -p${MARIADB_ROOT_PASSWORD}
+                    --all-databases
+                    --single-transaction
+                    > /bitnami/mariadb/data/full-backup.sql
+                onError: Fail
+                timeout: 5m
+        {{- end }}
+        {{- if .Values.openmrs-backend.elasticsearch.enabled }}
+        # Pre-backup hook — snapshot Elasticsearch before backup starts
+        - name: elasticsearch-backup-hook
+          includedNamespaces:
+            - {{ .Release.Namespace }}
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: elasticsearch
+          pre:
+            - exec:
+                container: elasticsearch
+                command:
+                  - /bin/sh
+                  - -c
+                  - >
+                    curl -s -X PUT
+                    "localhost:9200/_snapshot/velero/snapshot_$(date +%Y%m%d%H%M)?wait_for_completion=true"
+                onError: Fail
+                timeout: 10m
+        {{- end }}
+{{- end }}

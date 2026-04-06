@@ -40,3 +40,35 @@ openmrs-backend:
 openmrs-frontend:
   enabled: true
   nameOverride: "frontend"
+
+# Backup and Restore configuration 
+# Disabled by default. Set backup.enabled to true to turn on automated backups.
+backup:
+  enabled: false
+
+  # How often to take a backup. Default is every day at 02:00 UTC.
+  schedule: "0 2 * * *"
+
+  # How long to keep backups before they are deleted. Default is 30 days.
+  ttl: "720h0m0s"
+
+  # The S3 bucket where backups will be stored.
+  bucket: ""
+
+  # The AWS region where the S3 bucket lives.
+  region: "us-east-1"
+
+  # AWS credentials for accessing the S3 bucket.
+  # These will be stored as a Kubernetes secret, never in plain text.
+  credentials:
+    accessKey: ""
+    secretKey: ""
+
+  # Restore health check settings.
+  restore:
+    # How often to run the health check.
+    schedule: "*/30 * * * *"
+
+    # How many minutes a pod must be broken before a restore is triggered.
+    # This prevents false triggers during normal pod restarts.
+    brokenThresholdMinutes: 15

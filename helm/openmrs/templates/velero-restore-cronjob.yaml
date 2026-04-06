@@ -1,0 +1,157 @@
+{{- if .Values.backup.enabled }}
+# ClusterRole — gives the restore checker permission to read pods and manage restores (TRUNK-6608)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-restore-checker
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: ["velero.io"]
+    resources: ["backups", "restores"]
+    verbs: ["get", "list", "create"]
+---
+# ClusterRoleBinding — connects the permission above to our service account (TRUNK-6608)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Name }}-restore-checker
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Name }}-restore-checker
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-restore-checker
+    namespace: {{ .Release.Namespace }}
+---
+# ServiceAccount — the identity that the restore checker runs 
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name }}-restore-checker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+---
+# CronJob — health check that auto-restores when OpenMRS is genuinely broken (TRUNK-6608)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-restore-check
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.restore.schedule | quote }}
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: {{ .Release.Name }}-restore-checker
+          restartPolicy: OnFailure
+          containers:
+            - name: restore-check
+              image: bitnami/kubectl:1.30
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "=== OpenMRS Health Check $(date) ==="
+                  NAMESPACE={{ .Release.Namespace }}
+                  THRESHOLD_SECONDS={{ mul .Values.backup.restore.brokenThresholdMinutes 60 }}
+
+                  # Count pods that are Running
+                  RUNNING=$(kubectl get pods -n "$NAMESPACE" \
+                    --field-selector=status.phase=Running \
+                    --no-headers 2>/dev/null | wc -l)
+
+                  echo "Running pods: $RUNNING"
+
+                  # Find pods that have been in a broken state
+                  # longer than the threshold (default 15 minutes)
+                  # This avoids false triggers during normal pod restarts
+                  SUSTAINED_BROKEN=0
+
+                  for pod in $(kubectl get pods -n "$NAMESPACE" \
+                    --no-headers 2>/dev/null | \
+                    grep -E 'CrashLoopBackOff|Error|OOMKilled|ImagePullBackOff' | \
+                    awk '{print $1}'); do
+
+                    LAST_TRANSITION=$(kubectl get pod "$pod" \
+                      -n "$NAMESPACE" \
+                      -o jsonpath='{.status.conditions[?(@.type=="Ready")].lastTransitionTime}' \
+                      2>/dev/null)
+
+                    if [ -n "$LAST_TRANSITION" ]; then
+                      TRANSITION_EPOCH=$(date -d "$LAST_TRANSITION" +%s 2>/dev/null)
+                      NOW=$(date +%s)
+                      AGE=$((NOW - TRANSITION_EPOCH))
+
+                      if [ "$AGE" -gt "$THRESHOLD_SECONDS" ]; then
+                        echo "Pod $pod has been broken for $AGE seconds"
+                        SUSTAINED_BROKEN=$((SUSTAINED_BROKEN + 1))
+                      else
+                        echo "Pod $pod is broken but only for $AGE seconds - within startup grace period"
+                      fi
+                    fi
+                  done
+
+                  echo "Sustained broken pods: $SUSTAINED_BROKEN"
+
+                  # Only trigger restore if BOTH conditions are true:
+                  # 1. Fewer than 3 pods are running
+                  # 2. At least 2 pods have been broken longer than the threshold
+                  if [ "$RUNNING" -lt 3 ] && [ "$SUSTAINED_BROKEN" -ge 2 ]; then
+                    echo "Cluster appears genuinely broken. Checking for active restore..."
+
+                    ACTIVE_RESTORE=$(kubectl get restore.velero.io \
+                      -n "$NAMESPACE" \
+                      --no-headers 2>/dev/null | \
+                      grep -cE 'InProgress' || true)
+
+                    if [ "$ACTIVE_RESTORE" -gt 0 ]; then
+                      echo "Restore already in progress. Skipping."
+                      exit 0
+                    fi
+
+                    # Find the most recent completed backup
+                    LATEST_BACKUP=$(kubectl get backup.velero.io \
+                      -n "$NAMESPACE" \
+                      --sort-by=.metadata.creationTimestamp \
+                      --no-headers 2>/dev/null | \
+                      grep 'Completed' | tail -1 | awk '{print $1}')
+
+                    if [ -z "$LATEST_BACKUP" ]; then
+                      echo "No completed backups found. Cannot restore."
+                      exit 1
+                    fi
+
+                    echo "Triggering restore from backup: $LATEST_BACKUP"
+
+                    # Create a Velero Restore resource using kubectl apply
+                    # This is the correct approach — no Velero CLI needed
+                    cat <<EOF | kubectl apply -f -
+                  apiVersion: velero.io/v1
+                  kind: Restore
+                  metadata:
+                    name: auto-restore-$(date +%Y%m%d%H%M)
+                    namespace: $NAMESPACE
+                  spec:
+                    backupName: $LATEST_BACKUP
+                    includedNamespaces:
+                      - $NAMESPACE
+                    existingResourcePolicy: replace
+                  EOF
+
+                    echo "Restore submitted successfully."
+                  else
+                    echo "Cluster is healthy or within normal startup range. No restore needed."
+                  fi
+{{- end }}
