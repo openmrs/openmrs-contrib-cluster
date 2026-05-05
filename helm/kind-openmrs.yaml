@@ -27,8 +27,7 @@ openmrs-backend:
     enabled: false
   elasticsearch:
     enabled: true
-    master:
-      replicaCount: 3
+    replicas: 1
   minio:
     enabled: true
     auth:

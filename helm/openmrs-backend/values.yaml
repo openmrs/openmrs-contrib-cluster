@@ -65,77 +65,54 @@ mariadb:
 
 elasticsearch:
   enabled: false
-  image:
-    repository: bitnamilegacy/elasticsearch
-    tag: 9.1.2
-  volumePermissions:
-    image:
-      repository: bitnamilegacy/os-shell
-  sysctlImage:
-    repository: bitnamilegacy/os-shell
-  service:
-    ports:
-      restAPI: 9200
+  # Official Elastic chart image config
+  image: "docker.elastic.co/elasticsearch/elasticsearch"
+  imageTag: "8.5.1"
+  imagePullPolicy: "IfNotPresent"
+  # Single-node: all roles in one node
+  roles:
+    - master
+    - data
+    - data_content
+    - data_hot
+    - data_warm
+    - data_cold
+    - ingest
+    - ml
+    - remote_cluster_client
+    - transform
+  replicas: 1
+  # JVM heap size (matches old heapSize: 128m)
+  esJavaOpts: "-Xmx128m -Xms128m"
+  # Plugins to install
   plugins: "analysis-phonetic"
-  # Set up Elastic search as single node
-  master:
-    masterOnly: false
-    replicaCount: 1
-    heapSize: 128m
+  # Persistence config
+  persistence:
+    enabled: true
+    labels:
+      enabled: false
+    annotations: {}
+  volumeClaimTemplate:
+    accessModes: ["ReadWriteOnce"]
     resources:
-      limits:
-        cpu: 750m
-        ephemeral-storage: 2Gi
-        memory: 768Mi
       requests:
-        cpu: 500m
-        ephemeral-storage: 50Mi
-        memory: 512Mi
-    persistence:
-      enabled: true
-      size: 8Gi
-
-  data:
-    replicaCount: 0
-    heapSize: 1024m
-    resources:
-      limits:
-        cpu: 750m
-        ephemeral-storage: 2Gi
-        memory: 1536Mi
-      requests:
-        cpu: 500m
-        ephemeral-storage: 50Mi
-        memory: 1024Mi
-    persistence:
-      enabled: true
-      size: 8Gi
-
-  coordinating:
-    replicaCount: 0
-    heapSize: 128m
-    resources:
-      limits:
-        cpu: 750m
-        ephemeral-storage: 2Gi
-        memory: 768Mi
-      requests:
-        cpu: 500m
-        ephemeral-storage: 50Mi
-        memory: 512Mi
-
-  ingest:
-    replicaCount: 0
-    heapSize: 128m
-    resources:
-      limits:
-        cpu: 750m
-        ephemeral-storage: 2Gi
-        memory: 768Mi
-      requests:
-        cpu: 500m
-        ephemeral-storage: 50Mi
-        memory: 512Mi
+        storage: 8Gi
+  # Resource limits/requests
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+      ephemeral-storage: 50Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+      ephemeral-storage: 2Gi
+  # Service port (default 9200)
+  service:
+    type: ClusterIP
+    port: 9200
+    httpPortName: http
+    transportPortName: transport
 
 minio:
   enabled: false
