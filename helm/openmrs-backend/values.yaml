@@ -65,6 +65,13 @@ mariadb:
 
 elasticsearch:
   enabled: false
+
+  # Required: Elasticsearch bootstrap check — must be >= 262144
+  # The Elastic chart sets vm.max_map_count on the host via an init container
+  # when this value is provided. Without it, the ES pod will not start on
+  # most Linux hosts including kind cluster nodes.
+  sysctlVmMaxMapCount: 262144
+
   # Official Elastic chart image config
   image: "docker.elastic.co/elasticsearch/elasticsearch"
   imageTag: "8.5.1"
@@ -73,16 +80,10 @@ elasticsearch:
   roles:
     - master
     - data
-    - data_content
-    - data_hot
-    - data_warm
-    - data_cold
     - ingest
-    - ml
-    - remote_cluster_client
-    - transform
   replicas: 1
-  # JVM heap size (matches old heapSize: 128m)
+  # NOTE: 128m heap is for local/CI use only.
+  # Production deployments should set a minimum of 512m (-Xmx512m -Xms512m).
   esJavaOpts: "-Xmx128m -Xms128m"
   # Plugins to install
   plugins: "analysis-phonetic"
