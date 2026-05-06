@@ -28,6 +28,7 @@ openmrs-backend:
   elasticsearch:
     enabled: true
     replicas: 1
+    disableSecurity: true
   minio:
     enabled: true
     auth:

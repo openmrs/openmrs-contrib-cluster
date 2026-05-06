@@ -66,39 +66,23 @@ mariadb:
 elasticsearch:
   enabled: false
 
-  # Required: Elasticsearch bootstrap check — must be >= 262144
-  # The Elastic chart sets vm.max_map_count on the host via an init container
-  # when this value is provided. Without it, the ES pod will not start on
-  # most Linux hosts including kind cluster nodes.
-  sysctlVmMaxMapCount: 262144
+  # Elasticsearch version to deploy (must be supported by the installed ECK operator)
+  version: "8.15.3"
 
-  # Official Elastic chart image config
-  image: "docker.elastic.co/elasticsearch/elasticsearch"
-  imageTag: "8.5.1"
-  imagePullPolicy: "IfNotPresent"
-  # Single-node: all roles in one node
-  roles:
-    - master
-    - data
-    - ingest
+  # Number of Elasticsearch nodes in the single nodeSet
   replicas: 1
-  # NOTE: 128m heap is for local/CI use only.
-  # Production deployments should set a minimum of 512m (-Xmx512m -Xms512m).
+
+  # JVM heap size. Keep low for local/kind. Use -Xmx512m -Xms512m minimum in production.
   esJavaOpts: "-Xmx128m -Xms128m"
-  # Plugins to install
+
+  # Comma-separated list of plugins to install via postStart lifecycle hook.
+  # Uses the official ECK plugin installation pattern (postStart on the ES container).
   plugins: "analysis-phonetic"
-  # Persistence config
-  persistence:
-    enabled: true
-    labels:
-      enabled: false
-    annotations: {}
-  volumeClaimTemplate:
-    accessModes: ["ReadWriteOnce"]
-    resources:
-      requests:
-        storage: 8Gi
-  # Resource limits/requests
+
+  # Persistent storage size per node
+  storageSize: "8Gi"
+
+  # Container resource requests and limits
   resources:
     requests:
       cpu: 500m
@@ -108,12 +92,17 @@ elasticsearch:
       cpu: 750m
       memory: 768Mi
       ephemeral-storage: 2Gi
-  # Service port (default 9200)
-  service:
-    type: ClusterIP
-    port: 9200
-    httpPortName: http
-    transportPortName: transport
+
+  # vm.max_map_count value set by the privileged sysctl init container.
+  # Must be >= 262144. Required on most Linux hosts including kind nodes.
+  sysctlVmMaxMapCount: 262144
+
+  # TLS/security toggle.
+  # ECK enables TLS and authentication by default (xpack.security.enabled: true).
+  # Set disableSecurity to true ONLY for local development / kind clusters where
+  # you want plain HTTP access without credentials.
+  # WARNING: never set disableSecurity: true in production.
+  disableSecurity: false
 
 minio:
   enabled: false

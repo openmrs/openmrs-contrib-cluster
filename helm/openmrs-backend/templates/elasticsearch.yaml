@@ -1,0 +1,61 @@
+{{- if .Values.elasticsearch.enabled }}
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: {{ include "elasticsearch.clusterName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs-backend.labels" . | nindent 4 }}
+spec:
+  version: {{ .Values.elasticsearch.version | quote }}
+
+  nodeSets:
+  - name: default
+    count: {{ .Values.elasticsearch.replicas }}
+
+    config:
+      node.roles: ["master", "data", "ingest"]
+      {{- if .Values.elasticsearch.disableSecurity }}
+      xpack.security.enabled: false
+      {{- end }}
+
+    podTemplate:
+      spec:
+        initContainers:
+        - name: sysctl
+          securityContext:
+            privileged: true
+            runAsUser: 0
+          command:
+          - sh
+          - -c
+          - sysctl -w vm.max_map_count={{ .Values.elasticsearch.sysctlVmMaxMapCount }}
+
+        containers:
+        - name: elasticsearch
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                - sh
+                - -c
+                - |
+                  if [ -n "{{ .Values.elasticsearch.plugins }}" ]; then
+                    bin/elasticsearch-plugin install --batch {{ .Values.elasticsearch.plugins }} || true
+                  fi
+          env:
+          - name: ES_JAVA_OPTS
+            value: {{ .Values.elasticsearch.esJavaOpts | quote }}
+          resources:
+            {{- toYaml .Values.elasticsearch.resources | nindent 12 }}
+
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .Values.elasticsearch.storageSize }}
+{{- end }}

@@ -35,11 +35,6 @@ dependencies:
     condition: galera.enabled
     alias: galera
 
-  - name: elasticsearch
-    version: 8.5.1
-    repository: https://helm.elastic.co
-    condition: elasticsearch.enabled
-
   - name: minio
     version: 17.0.16
     repository: oci://registry-1.docker.io/bitnamicharts

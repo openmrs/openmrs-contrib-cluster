@@ -55,6 +55,19 @@ Make sure that Docker is running and issue the following commands:
 
 How to try it out?
 
+#### Prerequisites: ECK Operator
+
+If you intend to use `elasticsearch.enabled=true`, the ECK operator must be installed
+in the cluster first (one-time setup per cluster):
+
+      helm repo add elastic https://helm.elastic.co
+      helm repo update
+      helm install elastic-operator elastic/eck-operator \
+        -n elastic-system --create-namespace
+
+The operator watches for `Elasticsearch` custom resources and manages their lifecycle.
+It runs in the `elastic-system` namespace and is independent of the OpenMRS release.
+
 From local source:
 
       helm upgrade --install --create-namespace -n openmrs --values ../kind-openmrs.yaml openmrs .
@@ -112,25 +125,15 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `op
 | `openmrs-backend.galera.db.name`                                 | Name for an OpenMRS database                                                                                           | `"openmrs"`                                               |
 | `openmrs-backend.galera.db.user`                                 | Name for a DB user                                                                                                     | `"openmrs"`                                               |
 | `openmrs-backend.galera.db.password`                             | Name for a DB user's password                                                                                          | `"OpenMRS123"`                                            |
-| `openmrs-backend.elasticsearch.enabled`                          | Create Elastic Search Cluster                                                                                          | `"true"`                                                  |
-| `openmrs-backend.elasticsearch.service.ports.restAPI`            | Port to expose Elastic search API                                                                                      | `"9200"`                                                  |
-| `openmrs-backend.elasticsearch.master.masterOnly`                | Make master assume all roles (masterOnly: false)                                                                       | `"false"`                                                 |
-| `openmrs-backend.elasticsearch.master.replicaCount`              | No of replicas of master                                                                                               | `"1"`                                                     |
-| `openmrs-backend.elasticsearch.master.heapSize`                  | Elasticsearch master-eligible node heap size                                                                           | `"128m"`                                                  |
-| `openmrs-backend.elasticsearch.master.resources`                 | Set container requests and limits for different resources like CPU or memory <br/>(essential for production workloads) | `"{}"`                                                    |
-| `openmrs-backend.elasticsearch.master.persistence.enabled`       | Enable persistence using a PersistentVolumeClaim                                                                       | `"true"`                                                  |
-| `openmrs-backend.elasticsearch.master.persistence.size`          | Persistent Volume Size                                                                                                 | `"8Gi"`                                                   |
-| `openmrs-backend.elasticsearch.data.replicaCount`                | No of replicas of data Node                                                                                            | `"0"`                                                     |
-| `openmrs-backend.elasticsearch.data.heapSize`                    | Elasticsearch data-eligible node heap size                                                                             | `"1024m"`                                                 |
-| `openmrs-backend.elasticsearch.data.resources`                   | Set container requests and limits for different resources like CPU or memory <br/>(essential for production workloads) | `"{}"`                                                    |
-| `openmrs-backend.elasticsearch.data.persistence.enabled`         | Enable persistence using a PersistentVolumeClaim                                                                       | `"true"`                                                  |
-| `openmrs-backend.elasticsearch.data.persistence.size`            | Persistent Volume Size                                                                                                 | `"8Gi"`                                                   |
-| `openmrs-backend.elasticsearch.coordinating.replicaCount`        | No of replicas of Coordinating node                                                                                    | `"0"`                                                     |
-| `openmrs-backend.elasticsearch.coordinating.heapSize`            | Elasticsearch coordinating-eligible node heap size                                                                     | `"128m"`                                                  |
-| `openmrs-backend.elasticsearch.coordinating.resources`           | Set container requests and limits for different resources like CPU or memory <br/>(essential for production workloads) | `"{}"`                                                    |
-| `openmrs-backend.elasticsearch.ingest.replicaCount`              | No of replicas of Ingest node                                                                                          | `"0"`                                                     |
-| `openmrs-backend.elasticsearch.ingest.heapSize`                  | Elasticsearch ingest-eligible node heap size                                                                           | `"128m"`                                                  |
-| `openmrs-backend.elasticsearch.ingest.resources`                 | Set container requests and limits for different resources like CPU or memory <br/>(essential for production workloads) | `"{}"`                                                    |
+| `openmrs-backend.elasticsearch.enabled` | Deploy an ECK-managed Elasticsearch cluster | `false` |
+| `openmrs-backend.elasticsearch.version` | Elasticsearch version (must be compatible with installed ECK operator) | `"8.15.3"` |
+| `openmrs-backend.elasticsearch.replicas` | Number of Elasticsearch nodes | `1` |
+| `openmrs-backend.elasticsearch.esJavaOpts` | JVM heap flags. Increase to `-Xmx512m -Xms512m` minimum in production | `"-Xmx128m -Xms128m"` |
+| `openmrs-backend.elasticsearch.plugins` | Comma-separated plugins installed via postStart hook | `"analysis-phonetic"` |
+| `openmrs-backend.elasticsearch.storageSize` | Persistent volume size per node | `"8Gi"` |
+| `openmrs-backend.elasticsearch.resources` | Container resource requests and limits | see `values.yaml` |
+| `openmrs-backend.elasticsearch.sysctlVmMaxMapCount` | vm.max_map_count set by privileged init container (must be >= 262144) | `262144` |
+| `openmrs-backend.elasticsearch.disableSecurity` | Disable TLS and authentication (local/dev only, never use in production) | `false` |
 | `openmrs-backend.monitoring.enabled`                             | Enable monitoring (Grafana, Loki, Alloy)                                                                               | `"false"`                                                 |
 | `openmrs-backend.grafana.adminPassword`                          | Grafana admin password                                                                                                 | `"Admin123"`                                              |
 | `openmrs-backend.grafana.ingress.enabled`                        | Enable ingress for Grafana                                                                                             | `"true"`                                                  |
@@ -138,7 +141,9 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `op
 
 See [MariaDB](https://github.com/bitnami/charts/blob/main/bitnami/mariadb/README.md) helm chart for other MariaDB parameters.
 
-See [ElasticSearch](https://github.com/bitnami/charts/blob/main/bitnami/elasticsearch/README.md) helm chart for other ElasticSearch parameters.
+See [ECK Elasticsearch configuration](https://www.elastic.co/docs/deploy-manage/deploy/cloud-on-k8s/elasticsearch-configuration)
+for full configuration options. The ECK operator must be installed as a cluster prerequisite
+before enabling Elasticsearch — see the Prerequisites section below.
 
 See [Grafana](https://github.com/grafana-community/helm-charts/blob/main/charts/grafana/README.md), [Loki](https://github.com/grafana/loki/blob/main/production/helm/loki/README.md) and [Alloy](https://github.com/grafana/alloy/blob/main/operations/helm/charts/alloy/README.md) helm charts for other Grafana parameters.
 
