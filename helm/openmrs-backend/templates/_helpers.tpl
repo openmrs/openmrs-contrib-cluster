@@ -63,12 +63,9 @@ Create the name of the service account to use
 
 {{/*
 Name of the ECK Elasticsearch custom resource.
-ECK creates a Service named <clusterName>-es-http from this.
 */}}
 {{/*
-Name of the Elasticsearch CRD created by the eck-elasticsearch chart.
-ECK creates services named <crd-name>-es-http from this.
-The CRD name is: <release>-<alias> = openmrs-elasticsearch-eck
+Name of the Elasticsearch CRD created by ECK for the Elasticsearch cluster.
 */}}
 {{- define "elasticsearch.clusterName" -}}
 {{- printf "%s-elasticsearch-eck" .Release.Name -}}
@@ -76,7 +73,6 @@ The CRD name is: <release>-<alias> = openmrs-elasticsearch-eck
 
 {{/*
 HTTP service name created by ECK for the Elasticsearch cluster.
-ECK naming pattern: <clusterName>-es-http
 */}}
 {{- define "elasticsearch.serviceName" -}}
 {{- printf "%s-es-http" (include "elasticsearch.clusterName" .) -}}
