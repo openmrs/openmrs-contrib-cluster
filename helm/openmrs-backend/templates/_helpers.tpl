@@ -65,14 +65,13 @@ Create the name of the service account to use
 Name of the ECK Elasticsearch custom resource.
 ECK creates a Service named <clusterName>-es-http from this.
 */}}
+{{/*
+Name of the Elasticsearch CRD created by the eck-elasticsearch chart.
+ECK creates services named <crd-name>-es-http from this.
+The CRD name is: <release>-<alias> = openmrs-elasticsearch-eck
+*/}}
 {{- define "elasticsearch.clusterName" -}}
-{{- $name := "elasticsearch" -}}
-{{- $releaseName := regexReplaceAll "(-?[^a-z\\d\\-])+-?" (lower .Release.Name) "-" -}}
-{{- if contains $name $releaseName -}}
-{{- $releaseName | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s-%s" $releaseName $name | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
+{{- printf "%s-elasticsearch-eck" .Release.Name -}}
 {{- end }}
 
 {{/*
@@ -85,14 +84,14 @@ ECK naming pattern: <clusterName>-es-http
 
 {{/*
 Full internal cluster URL for the ECK-managed Elasticsearch HTTP service.
-Format: http://<clusterName>-es-http.<namespace>.svc.cluster.local:9200
 */}}
 {{- define "openmrs-elasticsearch.url" -}}
-{{- $releaseNameSpace := .Release.Namespace -}}
-{{- $clusterDomain := "svc.cluster.local" -}}
+{{- $namespace := .Release.Namespace -}}
 {{- $port := "9200" -}}
-{{- $fullurl := printf "http://%s.%s.%s:%s" (include "elasticsearch.serviceName" .) $releaseNameSpace $clusterDomain $port -}}
-{{- quote $fullurl -}}
+{{- printf "https://%s.%s.svc.cluster.local:%s"
+    (include "elasticsearch.serviceName" .)
+    $namespace
+    $port | quote -}}
 {{- end }}
 
 {{/*

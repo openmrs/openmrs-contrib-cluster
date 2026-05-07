@@ -17,5 +17,8 @@ dependencies:
 - name: alloy
   repository: https://grafana.github.io/helm-charts
   version: 1.6.0
-digest: sha256:480bb243648e4d5e4ca64a6d82defac385b47f247b17f25646e2f278c74f3619
-generated: "2026-05-06T13:54:59.175968558+03:00"
+- name: eck-elasticsearch
+  repository: https://helm.elastic.co
+  version: 0.19.0
+digest: sha256:aee059a25d3956c8ef5b2242bdc319509c2de6220d7f26744820d2784b415388
+generated: "2026-05-07T14:31:07.260974137+03:00"

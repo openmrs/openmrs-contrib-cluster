@@ -66,43 +66,76 @@ mariadb:
 elasticsearch:
   enabled: false
 
-  # Elasticsearch version to deploy (must be supported by the installed ECK operator)
+elasticsearch-eck:
+  # Elasticsearch version deployed by ECK
   version: "8.15.3"
 
-  # Number of Elasticsearch nodes in the single nodeSet
-  replicas: 1
+  # nodeSets defines the cluster topology
+  # For local/CI: single node with all roles
+  nodeSets:
+    - name: default
+      count: 1
+      config:
+        node.roles:
+          - master
+          - data
+          - ingest
+        node.store.allow_mmap: false
 
-  # JVM heap size. Keep low for local/kind. Use -Xmx512m -Xms512m minimum in production.
-  esJavaOpts: "-Xmx128m -Xms128m"
+        # Anonymous access — ECK-supported way to allow unauthenticated
+        # connections from the OpenMRS backend without disabling security.
+        # See: https://www.elastic.co/guide/en/elasticsearch/reference/8.15/anonymous-access.html
+        # WARNING: Only enable in local/CI environments. Never use in production.
+        xpack.security.authc.anonymous.username: anonymous
+        xpack.security.authc.anonymous.roles: superuser
+        xpack.security.authc.anonymous.authz_exception: false
 
-  # Comma-separated list of plugins to install via postStart lifecycle hook.
-  # Uses the official ECK plugin installation pattern (postStart on the ES container).
-  plugins: "analysis-phonetic"
+      podTemplate:
+        spec:
+          initContainers:
+            - name: sysctl
+              securityContext:
+                privileged: true
+                runAsUser: 0
+              command:
+                - sh
+                - -c
+                - sysctl -w vm.max_map_count=262144
 
-  # Persistent storage size per node
-  storageSize: "8Gi"
+          containers:
+            - name: elasticsearch
+              env:
+                - name: ES_JAVA_OPTS
+                  value: "-Xmx512m -Xms512m"
+              lifecycle:
+                postStart:
+                  exec:
+                    command:
+                      - sh
+                      - -c
+                      - |
+                        if [ -n "analysis-phonetic" ]; then
+                          bin/elasticsearch-plugin install --batch analysis-phonetic || true
+                        fi
+              resources:
+                requests:
+                  cpu: 500m
+                  memory: 512Mi
+                  ephemeral-storage: 50Mi
+                limits:
+                  cpu: 750m
+                  memory: 768Mi
+                  ephemeral-storage: 2Gi
 
-  # Container resource requests and limits
-  resources:
-    requests:
-      cpu: 500m
-      memory: 512Mi
-      ephemeral-storage: 50Mi
-    limits:
-      cpu: 750m
-      memory: 768Mi
-      ephemeral-storage: 2Gi
-
-  # vm.max_map_count value set by the privileged sysctl init container.
-  # Must be >= 262144. Required on most Linux hosts including kind nodes.
-  sysctlVmMaxMapCount: 262144
-
-  # TLS/security toggle.
-  # ECK enables TLS and authentication by default (xpack.security.enabled: true).
-  # Set disableSecurity to true ONLY for local development / kind clusters where
-  # you want plain HTTP access without credentials.
-  # WARNING: never set disableSecurity: true in production.
-  disableSecurity: false
+  volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 8Gi
 
 minio:
   enabled: false
