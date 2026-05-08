@@ -1,5 +1,5 @@
 {{- if .Values.backup.enabled }}
-# ClusterRole — gives the restore checker permission to read pods and manage restores (TRUNK-6608)
+# ClusterRole — gives the restore checker permission to read pods and manage restores
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -14,7 +14,7 @@ rules:
     resources: ["backups", "restores"]
     verbs: ["get", "list", "create"]
 ---
-# ClusterRoleBinding — connects the permission above to our service account (TRUNK-6608)
+# ClusterRoleBinding — connects the permission above to our service account 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -39,7 +39,7 @@ metadata:
   labels:
     {{- include "openmrs.labels" . | nindent 4 }}
 ---
-# CronJob — health check that auto-restores when OpenMRS is genuinely broken (TRUNK-6608)
+# CronJob — health check that auto-restores when OpenMRS is genuinely broken 
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -58,100 +58,57 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: restore-check
-              image: bitnami/kubectl:1.30
+              image: bitnami/kubectl:1.30-debian-12
               command:
                 - /bin/sh
                 - -c
                 - |
-                  echo "=== OpenMRS Health Check $(date) ==="
-                  NAMESPACE={{ .Release.Namespace }}
-                  THRESHOLD_SECONDS={{ mul .Values.backup.restore.brokenThresholdMinutes 60 }}
+                  echo "=== OpenMRS Scheduled Restore $(date) ==="
+                  VELERO_NAMESPACE={{ .Values.backup.veleroNamespace }}
+                  APP_NAMESPACE={{ .Release.Namespace }}
 
-                  # Count pods that are Running
-                  RUNNING=$(kubectl get pods -n "$NAMESPACE" \
-                    --field-selector=status.phase=Running \
-                    --no-headers 2>/dev/null | wc -l)
-
-                  echo "Running pods: $RUNNING"
-
-                  # Find pods that have been in a broken state
-                  # longer than the threshold (default 15 minutes)
-                  # This avoids false triggers during normal pod restarts
-                  SUSTAINED_BROKEN=0
-
-                  for pod in $(kubectl get pods -n "$NAMESPACE" \
+                  # Find the most recent completed backup in the Velero namespace.
+                  # Velero stores its Backup resources in its own namespace,
+                  # not in the application namespace.
+                  LATEST_BACKUP=$(kubectl get backup.velero.io \
+                    -n "$VELERO_NAMESPACE" \
+                    --sort-by=.metadata.creationTimestamp \
                     --no-headers 2>/dev/null | \
-                    grep -E 'CrashLoopBackOff|Error|OOMKilled|ImagePullBackOff' | \
-                    awk '{print $1}'); do
+                    grep 'Completed' | tail -1 | awk '{print $1}')
 
-                    LAST_TRANSITION=$(kubectl get pod "$pod" \
-                      -n "$NAMESPACE" \
-                      -o jsonpath='{.status.conditions[?(@.type=="Ready")].lastTransitionTime}' \
-                      2>/dev/null)
+                  if [ -z "$LATEST_BACKUP" ]; then
+                    echo "No completed backups found in $VELERO_NAMESPACE. Skipping restore."
+                    exit 0
+                  fi
 
-                    if [ -n "$LAST_TRANSITION" ]; then
-                      TRANSITION_EPOCH=$(date -d "$LAST_TRANSITION" +%s 2>/dev/null)
-                      NOW=$(date +%s)
-                      AGE=$((NOW - TRANSITION_EPOCH))
+                  echo "Latest backup: $LATEST_BACKUP"
 
-                      if [ "$AGE" -gt "$THRESHOLD_SECONDS" ]; then
-                        echo "Pod $pod has been broken for $AGE seconds"
-                        SUSTAINED_BROKEN=$((SUSTAINED_BROKEN + 1))
-                      else
-                        echo "Pod $pod is broken but only for $AGE seconds - within startup grace period"
-                      fi
-                    fi
-                  done
+                  # Skip if a restore is already running
+                  ACTIVE=$(kubectl get restore.velero.io \
+                    -n "$VELERO_NAMESPACE" \
+                    --no-headers 2>/dev/null | \
+                    grep -cE 'InProgress' || true)
 
-                  echo "Sustained broken pods: $SUSTAINED_BROKEN"
+                  if [ "$ACTIVE" -gt 0 ]; then
+                    echo "A restore is already in progress. Skipping."
+                    exit 0
+                  fi
 
-                  # Only trigger restore if BOTH conditions are true:
-                  # 1. Fewer than 3 pods are running
-                  # 2. At least 2 pods have been broken longer than the threshold
-                  if [ "$RUNNING" -lt 3 ] && [ "$SUSTAINED_BROKEN" -ge 2 ]; then
-                    echo "Cluster appears genuinely broken. Checking for active restore..."
+                  echo "Triggering scheduled restore from: $LATEST_BACKUP"
 
-                    ACTIVE_RESTORE=$(kubectl get restore.velero.io \
-                      -n "$NAMESPACE" \
-                      --no-headers 2>/dev/null | \
-                      grep -cE 'InProgress' || true)
-
-                    if [ "$ACTIVE_RESTORE" -gt 0 ]; then
-                      echo "Restore already in progress. Skipping."
-                      exit 0
-                    fi
-
-                    # Find the most recent completed backup
-                    LATEST_BACKUP=$(kubectl get backup.velero.io \
-                      -n "$NAMESPACE" \
-                      --sort-by=.metadata.creationTimestamp \
-                      --no-headers 2>/dev/null | \
-                      grep 'Completed' | tail -1 | awk '{print $1}')
-
-                    if [ -z "$LATEST_BACKUP" ]; then
-                      echo "No completed backups found. Cannot restore."
-                      exit 1
-                    fi
-
-                    echo "Triggering restore from backup: $LATEST_BACKUP"
-
-                    # Create a Velero Restore resource using kubectl apply
-                    # This is the correct approach — no Velero CLI needed
-                    cat <<EOF | kubectl apply -f -
+                  cat <<EOF | kubectl apply -f -
                   apiVersion: velero.io/v1
                   kind: Restore
                   metadata:
-                    name: auto-restore-$(date +%Y%m%d%H%M)
-                    namespace: $NAMESPACE
+                    name: scheduled-restore-$(date +%Y%m%d%H%M)
+                    namespace: $VELERO_NAMESPACE
                   spec:
                     backupName: $LATEST_BACKUP
                     includedNamespaces:
-                      - $NAMESPACE
+                      - $APP_NAMESPACE
                     existingResourcePolicy: replace
                   EOF
 
-                    echo "Restore submitted successfully."
-                  else
-                    echo "Cluster is healthy or within normal startup range. No restore needed."
+                  echo "Restore submitted successfully."
                   fi
 {{- end }}

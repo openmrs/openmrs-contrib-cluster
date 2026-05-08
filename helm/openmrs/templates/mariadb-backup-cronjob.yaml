@@ -1,0 +1,83 @@
+{{- if and .Values.backup.enabled .Values.backup.mariadbBackup.enabled }}
+# Secret — AWS credentials for the MariaDB backup CronJob
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Release.Name }}-mariadb-backup-credentials
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: {{ .Values.backup.mariadbBackup.credentials.accessKey | quote }}
+  AWS_SECRET_ACCESS_KEY: {{ .Values.backup.mariadbBackup.credentials.secretKey | quote }}
+---
+# CronJob — dumps MariaDB directly to S3, independent of Velero
+# Using two containers with a shared volume:
+# 1. dump container — runs mysqldump and writes to shared volume
+# 2. upload container — uploads the dump file to S3 using AWS CLI
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-mariadb-backup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.mariadbBackup.schedule | quote }}
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          volumes:
+            - name: dump
+              emptyDir: {}
+          initContainers:
+            - name: dump
+              image: bitnami/mariadb:10.11
+              env:
+                - name: MARIADB_ROOT_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Release.Name }}-mariadb
+                      key: mariadb-root-password
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "Starting MariaDB dump..."
+                  mysqldump \
+                    -h {{ .Release.Name }}-mariadb-primary \
+                    -u root \
+                    -p${MARIADB_ROOT_PASSWORD} \
+                    --all-databases \
+                    --single-transaction \
+                    > /dump/backup.sql
+                  echo "Dump complete. Size: $(du -h /dump/backup.sql | cut -f1)"
+              volumeMounts:
+                - name: dump
+                  mountPath: /dump
+          containers:
+            - name: upload
+              image: amazon/aws-cli:2.15.0
+              envFrom:
+                - secretRef:
+                    name: {{ .Release.Name }}-mariadb-backup-credentials
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "Uploading dump to S3..."
+                  aws s3 cp /dump/backup.sql \
+                    s3://{{ .Values.backup.mariadbBackup.bucket }}/mariadb-backup-$(date +%Y%m%d%H%M).sql \
+                    --region {{ .Values.backup.mariadbBackup.region }} \
+                    {{- if .Values.backup.mariadbBackup.s3ForcePathStyle }}
+                    --no-sign-request \
+                    {{- end }}
+                  echo "Upload complete."
+              volumeMounts:
+                - name: dump
+                  mountPath: /dump
+{{- end }}

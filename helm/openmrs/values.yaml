@@ -58,17 +58,33 @@ backup:
   # The AWS region where the S3 bucket lives.
   region: "us-east-1"
 
+  # Set to true only if using MinIO or other S3-compatible endpoints.
+  # Leave as false for standard AWS S3.
+  s3ForcePathStyle: false
+
   # AWS credentials for accessing the S3 bucket.
   # These will be stored as a Kubernetes secret, never in plain text.
   credentials:
     accessKey: ""
     secretKey: ""
 
-  # Restore health check settings.
+  # Restore settings.
   restore:
-    # How often to run the health check.
-    schedule: "*/30 * * * *"
+    # Schedule for the daily restore job.
+    # Runs after the backup, e.g. if backup is at 02:00 restore runs at 03:00.
+    schedule: "0 3 * * *"
 
-    # How many minutes a pod must be broken before a restore is triggered.
-    # This prevents false triggers during normal pod restarts.
-    brokenThresholdMinutes: 15
+  # The namespace where Velero is installed.
+  # Velero stores its Backup and Restore resources in its own namespace.
+  veleroNamespace: "velero"
+
+  # MariaDB backup settings — runs a dedicated CronJob that dumps the DB directly to S3.
+  mariadbBackup:
+    enabled: false
+    schedule: "30 1 * * *"
+    bucket: ""
+    region: "us-east-1"
+    s3ForcePathStyle: false
+    credentials:
+      accessKey: ""
+      secretKey: ""

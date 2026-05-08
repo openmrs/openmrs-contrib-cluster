@@ -33,7 +33,4 @@ dependencies:
     repository: "file://../openmrs-frontend"
     #repository: "oci://ghcr.io/openmrs"
     condition: openmrs-frontend.enabled
-  - name: velero
-    version: "8.1.0"
-    repository: "https://vmware-tanzu.github.io/helm-charts"
-    condition: backup.enabled
+  
