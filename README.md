@@ -55,7 +55,7 @@ Make sure that Docker is running and issue the following commands:
 
 #### Prerequisites: MariaDB Operator
 
-If you intend to use `mariadb-operator.enabled=true`, install the operator
+If you intend to use `mariadb.enabled=true`, install the operator
 before deploying the OpenMRS chart. Two charts are required:
 
       helm repo add mariadb-operator https://helm.mariadb.com/mariadb-operator
@@ -84,9 +84,7 @@ or from registry:
 
       helm upgrade --install --create-namespace -n openmrs --set global.defaultStorageClass=standard --set global.defaultIngressClass=nginx openmrs openmrs/openmrs
 
-or if you want to use mariadb-galera cluster instead of mariadb with basic primary-secondary replication:
-
-      helm upgrade --install --create-namespace -n openmrs --set global.defaultStorageClass=standard --set global.defaultIngressClass=nginx --set openmrs-backend.mariadb.enabled=false --set openmrs-backend.galera.enabled=true openmrs openmrs/openmrs
+The MariaDB operator always creates a 3-node Galera cluster when `mariadb.enabled=true`.
 
 
 Once installed you will see instructions on how to configure port-forwarding and access the instance. If you deploy to a cloud provider you will need to adjust the ingress configuration per https://kubernetes.github.io/ingress-nginx/deploy/#cloud-deployments
@@ -105,7 +103,7 @@ If running locally run:
 
 #### Common parameters
 
-Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `openrms-gateway`, `openmrs-backend.mariadb`, `openmrs-backend.galera`.
+Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `openrms-gateway`, `openmrs-backend.mariadb`.
 
 | Name                | Description                  | Default Value                                            |
 |---------------------|------------------------------|----------------------------------------------------------|
@@ -119,20 +117,12 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `op
 |------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
 | `openmrs-backend.db.hostname`                                    | Hostname for OpenMRS DB                                                                                                | `""` or defaults to galera or mariadb hostname if enabled |
 | `openmrs-backend.persistance.size`                               | Size of persistent volume to claim (for search index, attachments, etc.)                                               | `"8Gi"`                                                   |
-| `openmrs-backend.mariadb-operator.enabled`                       | Use official MariaDB Kubernetes Operator instead of Bitnami charts                                                     | `"false"`                                                 |
-| `openmrs-backend.mariadb-operator.galera`                        | Use Galera cluster topology (requires `mariadb-operator.enabled=true`)                                                 | `"false"`                                                 |
-| `openmrs-backend.mariadb.enabled`                                | Create MariaDB with read-only replica                                                                                  | `"true"`                                                  |
-| `openmrs-backend.mariadb.primary.persistence.storageClass`       | MariaDB primary persistent volume storage Class                                                                        | `global.defaultStorageClass`                              |
-| `openmrs-backend.mariadb.secondary.persistence.storageClass`     | MariaDB secondary persistent volume storage Class                                                                      | `global.defaultStorageClass`                              |
-| `openmrs-backend.mariadb.auth.rootPassword`                      | Password for the `root` user. Ignored if existing secret is provided.                                                  | `"true"`                                                  |
+| `openmrs-backend.mariadb.enabled`                                | Use official MariaDB Kubernetes Operator with 3-node Galera cluster                                                   | `"false"`                                                 |
+| `openmrs-backend.mariadb.auth.rootPassword`                      | Password for the `root` user. Ignored if existing secret is provided.                                                  | `"Root123"`                                               |
 | `openmrs-backend.mariadb.auth.database`                          | Name for an OpenMRS database                                                                                           | `"openmrs"`                                               |
 | `openmrs-backend.mariadb.auth.username`                          | Name for a DB user                                                                                                     | `"openmrs"`                                               |
 | `openmrs-backend.mariadb.auth.password`                          | Name for a DB user's password                                                                                          | `"OpenMRS123"`                                            |
-| `openmrs-backend.galera.enabled`                                 | Create MariaDB Galera cluster with 3 nodes (default)                                                                   | `"true"`                                                  |
-| `openmrs-backend.galera.rootUser.password`                       | Password for the `root` user. Ignored if existing secret is provided.                                                  | `"true"`                                                  |
-| `openmrs-backend.galera.db.name`                                 | Name for an OpenMRS database                                                                                           | `"openmrs"`                                               |
-| `openmrs-backend.galera.db.user`                                 | Name for a DB user                                                                                                     | `"openmrs"`                                               |
-| `openmrs-backend.galera.db.password`                             | Name for a DB user's password                                                                                          | `"OpenMRS123"`                                            |
+| `openmrs-backend.mariadb.primary.resources`                      | MariaDB container resources (requests/limits)                                                                          | `{}`                                                      |
 | `openmrs-backend.elasticsearch.enabled`                          | Create Elastic Search Cluster                                                                                          | `"true"`                                                  |
 | `openmrs-backend.elasticsearch.service.ports.restAPI`            | Port to expose Elastic search API                                                                                      | `"9200"`                                                  |
 | `openmrs-backend.elasticsearch.master.masterOnly`                | Make master assume all roles (masterOnly: false)                                                                       | `"false"`                                                 |
@@ -157,7 +147,7 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `op
 | `openmrs-backend.grafana.ingress.enabled`                        | Enable ingress for Grafana                                                                                             | `"true"`                                                  |
 | `openmrs-backend.grafana.ingress.hosts`                          | Hosts for Grafana ingress                                                                                              | `["localhost"]`                                           |
 
-See [MariaDB](https://github.com/bitnami/charts/blob/main/bitnami/mariadb/README.md) helm chart for other MariaDB parameters.
+See [MariaDB Operator](https://github.com/mariadb-operator/mariadb-operator) for MariaDB CRD parameters.
 
 See [ElasticSearch](https://github.com/bitnami/charts/blob/main/bitnami/elasticsearch/README.md) helm chart for other ElasticSearch parameters.
 

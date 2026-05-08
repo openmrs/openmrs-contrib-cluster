@@ -1,5 +1,4 @@
-{{- $operatorEnabled := index .Values "mariadb-operator" "enabled" | default false }}
-{{- if $operatorEnabled }}
+{{- if .Values.mariadb.enabled }}
 apiVersion: k8s.mariadb.com/v1alpha1
 kind: MariaDB
 metadata:
@@ -36,20 +35,11 @@ spec:
     character_set_server=utf8mb4
     collation_server=utf8mb4_general_ci
 
-  {{- $operatorGalera := index .Values "mariadb-operator" "galera" | default false }}
-  {{- if $operatorGalera }}
-  replicas: {{ .Values.galera.replicaCount | default 3 }}
+  replicas: 3
   galera:
     enabled: true
     recovery:
       enabled: true
-  {{- else }}
-  replicas: 2
-  replication:
-    enabled: true
-    primary:
-      autoFailover: true
-  {{- end }}
 
   resources:
     requests:

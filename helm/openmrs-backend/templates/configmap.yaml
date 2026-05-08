@@ -5,36 +5,16 @@ metadata:
   labels:
     {{- include "openmrs-backend.labels" . | nindent 4 }}
 data:
-  {{- $operatorEnabled := index .Values "mariadb-operator" "enabled" | default false }}
-  {{- $operatorGalera := index .Values "mariadb-operator" "galera" | default false }}
-  {{- if $operatorEnabled }}
+  {{- if .Values.mariadb.enabled }}
   OMRS_DB: "mariadb"
   OMRS_DB_NAME: {{ .Values.mariadb.auth.database | default "openmrs" | quote }}
-  {{- if $operatorGalera }}
   OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb"
   {{- else }}
-  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb-primary"
-  {{- end }}
-  {{- else }}
-  {{- if and (not .Values.mariadb.enabled) (not .Values.galera.enabled) }}
   {{- if .Values.db.url }}
   OMRS_DB_URL: {{ .Values.db.url | quote }}
   {{- else }}
   OMRS_DB_HOSTNAME: {{ .Values.db.hostname | quote }}
   OMRS_DB_PORT: {{ .Values.db.port | quote }}
-  {{- end }}
-  {{- end }}
-  {{- if and .Values.mariadb.enabled .Values.galera.enabled }}
-  {{- fail "You must not enable mariadb and galera at the same time." }}
-  {{- end }}
-  {{- if .Values.mariadb.enabled }}
-  OMRS_DB: "mariadb"
-  OMRS_DB_NAME: {{ .Values.mariadb.auth.database | quote }}
-  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb-headless"
-  {{- else if .Values.galera.enabled }}
-  OMRS_DB: "mariadb"
-  OMRS_DB_NAME: {{ .Values.galera.db.name | quote }}
-  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-galera-headless"
   {{- end }}
   {{- end }}
   {{- if .Values.elasticsearch.enabled }}
@@ -47,7 +27,7 @@ data:
   {{- if .Values.minio.enabled }}
   storage.type: "s3"
   storage.s3.region: "us-east-1"
-  storage.s3.endpoint: 'http://openmrs-minio.{{ .Release.Namespace }}.svc.cluster.local:9000'
+  storage.s3.endpoint: {{ include "openmrs-minio.url" . }}
   storage.s3.forcePathStyle: "true"
   {{- end }}
   {{- if .Values.infinispan.clustered }}

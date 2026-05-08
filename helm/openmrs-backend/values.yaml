@@ -26,34 +26,15 @@ db:
   username: openmrs
   password: OpenMRS123
 
-galera:
-  enabled: false
-  image:
-    repository: bitnamilegacy/mariadb-galera
-    tag: 10.11
-  rootUser:
-    password: Root123
-  db:
-    name: openmrs
-    user: openmrs
-    password: OpenMRS123
-  galera:
-    mariabackup:
-      password: Backup123
-
 mariadb:
-  enabled: true
   image:
     repository: mariadb
     tag: "10.11"
-  architecture: replication
   auth:
     rootPassword: Root123
-    replicationPassword: Replicate123
     database: openmrs
     username: openmrs
     password: OpenMRS123
-
   primary:
     persistence:
       enabled: true
@@ -65,18 +46,7 @@ mariadb:
       limits:
         cpu: "1"
         memory: 1Gi
-  secondary:
-    persistence:
-      enabled: true
-      size: 8Gi
-
-# MariaDB Kubernetes Operator
-# Set enabled: true to use the official operator instead of Bitnami charts.
-# The operator installs cluster-scoped CRDs and RBAC — it cannot be bundled
-# as a subchart inside the application chart.
-mariadb-operator:
   enabled: false
-  galera: false
 
 elasticsearch:
   enabled: false

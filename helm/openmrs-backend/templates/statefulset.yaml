@@ -36,10 +36,10 @@ spec:
         - name: workdir
           emptyDir: { }
 
-      {{ if or (.Values.galera.enabled) (.Values.mariadb.enabled) (index .Values "mariadb-operator" "enabled" | default false) }}
+      {{ if .Values.mariadb.enabled }}
       initContainers:
         - name: resolve-mariadb-hosts
-          image: bitnamilegacy/kubectl:1.33.4
+          image: alpine/kubectl:1.33.4
           envFrom:
             - configMapRef:
                 name: {{ include "openmrs-backend.fullname" . }}
@@ -48,43 +48,7 @@ spec:
             - -c
             - |
               echo "Resolving MariaDB hosts..."
-              {{ $operatorEnabled := index .Values "mariadb-operator" "enabled" | default false }}
-              {{- if $operatorEnabled }}
-              {{- $operatorGalera := index .Values "mariadb-operator" "galera" | default false }}
-              {{- if $operatorGalera }}
               echo "jdbc:mariadb:loadbalance://{{ .Release.Name }}-mariadb.{{ .Release.Namespace }}.svc.cluster.local:3306/$OMRS_DB_NAME?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8" > /work-dir/jdbc-url.txt
-              {{- else }}
-              echo "jdbc:mariadb://{{ .Release.Name }}-mariadb-primary.{{ .Release.Namespace }}.svc.cluster.local:3306/$OMRS_DB_NAME?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8" > /work-dir/jdbc-url.txt
-              {{- end }}
-              {{ else }}
-              HOSTS=""
-              {{ if .Values.galera.enabled }}
-              SERVICE={{ .Release.Name }}-galera
-              STATEFULSET=$SERVICE
-              {{ end }}
-              {{ if .Values.mariadb.enabled }}
-              SERVICE={{ .Release.Name }}-mariadb
-              STATEFULSET=$SERVICE-secondary
-              {{ end }}
-              REPLICA_COUNT=$(kubectl get statefulset $STATEFULSET -n {{ .Release.Namespace }} -o jsonpath='{.spec.replicas}')
-              {{ if .Values.mariadb.enabled }}
-              HOSTS="$SERVICE-primary-0.${SERVICE}-headless.{{ .Release.Namespace }}.svc.cluster.local"
-              {{ end }}
-              for i in $(seq 0 $((REPLICA_COUNT-1))); do
-                POD_FQDN="$STATEFULSET-${i}.${SERVICE}-headless.{{ .Release.Namespace }}.svc.cluster.local"
-                if [ -z "$HOSTS" ]; then
-                  HOSTS="$POD_FQDN"
-                else
-                  HOSTS="$HOSTS,$POD_FQDN"
-                fi
-              done
-              {{ if .Values.galera.enabled }}
-                MODE="loadbalance"
-              {{ else }}
-                MODE="replication"
-              {{ end }}
-              echo "jdbc:mariadb:$MODE://$HOSTS:3306/$OMRS_DB_NAME?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8" > /work-dir/jdbc-url.txt
-              {{ end }}
               echo "JDBC URL written: $(cat /work-dir/jdbc-url.txt)"
           volumeMounts:
             - name: workdir
@@ -118,7 +82,7 @@ spec:
               mountPath: /work-dir
             - name: data
               mountPath: /openmrs/data
-          {{ if or (.Values.galera.enabled) (.Values.mariadb.enabled) (index .Values "mariadb-operator" "enabled" | default false) }}
+          {{ if .Values.mariadb.enabled }}
           command:
             - sh
             - -c

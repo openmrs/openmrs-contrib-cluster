@@ -1,7 +1,4 @@
 dependencies:
-- name: mariadb-galera
-  repository: oci://registry-1.docker.io/bitnamicharts
-  version: 16.0.0
 - name: elasticsearch
   repository: oci://registry-1.docker.io/bitnamicharts
   version: 22.0.0
@@ -17,5 +14,5 @@ dependencies:
 - name: alloy
   repository: https://grafana.github.io/helm-charts
   version: 1.6.0
-digest: sha256:311f7872cab11b27bc8b263a231155861e76ea27f298990000055731a976f1fa
-generated: "2026-05-08T00:04:36.068402682+03:00"
+digest: sha256:3087b536a5972a43f7442651ffe24205e1670444c9882eae2c5839d37f5dbf39
+generated: "2026-05-08T13:41:54.728543745+03:00"
