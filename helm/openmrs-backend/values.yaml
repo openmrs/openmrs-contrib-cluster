@@ -72,15 +72,6 @@ mariadb:
 
 # MariaDB Kubernetes Operator
 # Set enabled: true to use the official operator instead of Bitnami charts.
-# Requires pre-installing two Helm charts as cluster prerequisites:
-#
-#   helm repo add mariadb-operator https://helm.mariadb.com/mariadb-operator
-#   helm repo update
-#   helm install mariadb-operator-crds mariadb-operator/mariadb-operator-crds \
-#     -n mariadb-system --create-namespace
-#   helm install mariadb-operator mariadb-operator/mariadb-operator \
-#     -n mariadb-system --create-namespace --wait
-#
 # The operator installs cluster-scoped CRDs and RBAC — it cannot be bundled
 # as a subchart inside the application chart.
 mariadb-operator:
