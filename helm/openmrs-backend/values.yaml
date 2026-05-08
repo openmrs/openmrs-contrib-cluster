@@ -44,8 +44,8 @@ galera:
 mariadb:
   enabled: true
   image:
-    repository: bitnamilegacy/mariadb
-    tag: 10.11
+    repository: mariadb
+    tag: "10.11"
   architecture: replication
   auth:
     rootPassword: Root123
@@ -58,10 +58,34 @@ mariadb:
     persistence:
       enabled: true
       size: 8Gi
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
   secondary:
     persistence:
       enabled: true
       size: 8Gi
+
+# MariaDB Kubernetes Operator
+# Set enabled: true to use the official operator instead of Bitnami charts.
+# Requires pre-installing two Helm charts as cluster prerequisites:
+#
+#   helm repo add mariadb-operator https://helm.mariadb.com/mariadb-operator
+#   helm repo update
+#   helm install mariadb-operator-crds mariadb-operator/mariadb-operator-crds \
+#     -n mariadb-system --create-namespace
+#   helm install mariadb-operator mariadb-operator/mariadb-operator \
+#     -n mariadb-system --create-namespace --wait
+#
+# The operator installs cluster-scoped CRDs and RBAC — it cannot be bundled
+# as a subchart inside the application chart.
+mariadb-operator:
+  enabled: false
+  galera: false
 
 elasticsearch:
   enabled: false
@@ -148,6 +172,9 @@ minio:
     volumePermissions:
       image:
         repository: bitnamilegacy/os-shell
+  containerPorts:
+    api: 9000
+    console: 9001
   console:
     image:
       repository: bitnamilegacy/minio-object-browser

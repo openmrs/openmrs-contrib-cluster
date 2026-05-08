@@ -1,0 +1,61 @@
+{{- $operatorEnabled := index .Values "mariadb-operator" "enabled" | default false }}
+{{- if $operatorEnabled }}
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: MariaDB
+metadata:
+  name: {{ .Release.Name }}-mariadb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs-backend.labels" . | nindent 4 }}
+spec:
+  image: mariadb:{{ .Values.mariadb.image.tag | default "10.11" }}
+
+  rootPasswordSecretKeyRef:
+    name: {{ include "openmrs-backend.fullname" . }}-mariadb-secret
+    key: root-password
+
+  database: {{ .Values.mariadb.auth.database | default "openmrs" | quote }}
+  username: {{ .Values.mariadb.auth.username | default "openmrs" | quote }}
+  passwordSecretKeyRef:
+    name: {{ include "openmrs-backend.fullname" . }}-mariadb-secret
+    key: user-password
+
+  port: 3306
+
+  storage:
+    size: {{ .Values.mariadb.primary.persistence.size | default "8Gi" | quote }}
+    storageClassName: {{ .Values.global.defaultStorageClass | default "standard" | quote }}
+
+  myCnf: |
+    [mariadb]
+    bind-address=*
+    default_storage_engine=InnoDB
+    binlog_format=ROW
+    innodb_autoinc_lock_mode=2
+    max_connections=200
+    character_set_server=utf8mb4
+    collation_server=utf8mb4_general_ci
+
+  {{- $operatorGalera := index .Values "mariadb-operator" "galera" | default false }}
+  {{- if $operatorGalera }}
+  replicas: {{ .Values.galera.replicaCount | default 3 }}
+  galera:
+    enabled: true
+    recovery:
+      enabled: true
+  {{- else }}
+  replicas: 2
+  replication:
+    enabled: true
+    primary:
+      autoFailover: true
+  {{- end }}
+
+  resources:
+    requests:
+      cpu: {{ .Values.mariadb.primary.resources.requests.cpu | default "500m" | quote }}
+      memory: {{ .Values.mariadb.primary.resources.requests.memory | default "512Mi" | quote }}
+    limits:
+      cpu: {{ .Values.mariadb.primary.resources.limits.cpu | default "1" | quote }}
+      memory: {{ .Values.mariadb.primary.resources.limits.memory | default "1Gi" | quote }}
+{{- end }}

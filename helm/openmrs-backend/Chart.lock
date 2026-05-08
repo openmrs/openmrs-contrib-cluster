@@ -1,7 +1,4 @@
 dependencies:
-- name: mariadb
-  repository: oci://registry-1.docker.io/bitnamicharts
-  version: 22.0.0
 - name: mariadb-galera
   repository: oci://registry-1.docker.io/bitnamicharts
   version: 16.0.0
@@ -20,5 +17,5 @@ dependencies:
 - name: alloy
   repository: https://grafana.github.io/helm-charts
   version: 1.6.0
-digest: sha256:fecbebad86d03f7f809de796b3b343e66bc93565e801488098ab08abfd53ecb8
-generated: "2026-02-19T14:43:51.765279+01:00"
+digest: sha256:311f7872cab11b27bc8b263a231155861e76ea27f298990000055731a976f1fa
+generated: "2026-05-08T00:04:36.068402682+03:00"

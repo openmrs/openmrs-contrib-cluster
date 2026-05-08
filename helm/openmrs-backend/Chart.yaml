@@ -24,11 +24,6 @@ version: 1.2.2
 appVersion: "nightly-core-2.8"
 
 dependencies:
-  - name: mariadb
-    version: 22.0.0
-    repository: oci://registry-1.docker.io/bitnamicharts
-    condition: mariadb.enabled
-
   - name: mariadb-galera
     version: 16.0.0
     repository: oci://registry-1.docker.io/bitnamicharts

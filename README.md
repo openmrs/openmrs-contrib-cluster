@@ -53,6 +53,25 @@ Make sure that Docker is running and issue the following commands:
       kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
       # Go to https://localhost:8443/ and login with generated token
 
+#### Prerequisites: MariaDB Operator
+
+If you intend to use `mariadb-operator.enabled=true`, install the operator
+before deploying the OpenMRS chart. Two charts are required:
+
+      helm repo add mariadb-operator https://helm.mariadb.com/mariadb-operator
+      helm repo update
+
+      # Install CRDs first (mandatory separate step)
+      helm install mariadb-operator-crds mariadb-operator/mariadb-operator-crds \
+        -n mariadb-system --create-namespace
+
+      # Install the operator
+      helm install mariadb-operator mariadb-operator/mariadb-operator \
+        -n mariadb-system --create-namespace --wait
+
+The operator watches for `MariaDB` custom resources across all namespaces
+and manages their full lifecycle including Galera cluster recovery.
+
 How to try it out?
 
 From local source:
@@ -100,6 +119,8 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `op
 |------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
 | `openmrs-backend.db.hostname`                                    | Hostname for OpenMRS DB                                                                                                | `""` or defaults to galera or mariadb hostname if enabled |
 | `openmrs-backend.persistance.size`                               | Size of persistent volume to claim (for search index, attachments, etc.)                                               | `"8Gi"`                                                   |
+| `openmrs-backend.mariadb-operator.enabled`                       | Use official MariaDB Kubernetes Operator instead of Bitnami charts                                                     | `"false"`                                                 |
+| `openmrs-backend.mariadb-operator.galera`                        | Use Galera cluster topology (requires `mariadb-operator.enabled=true`)                                                 | `"false"`                                                 |
 | `openmrs-backend.mariadb.enabled`                                | Create MariaDB with read-only replica                                                                                  | `"true"`                                                  |
 | `openmrs-backend.mariadb.primary.persistence.storageClass`       | MariaDB primary persistent volume storage Class                                                                        | `global.defaultStorageClass`                              |
 | `openmrs-backend.mariadb.secondary.persistence.storageClass`     | MariaDB secondary persistent volume storage Class                                                                      | `global.defaultStorageClass`                              |
