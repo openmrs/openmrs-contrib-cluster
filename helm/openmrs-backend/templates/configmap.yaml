@@ -8,7 +8,11 @@ data:
   {{- if .Values.mariadb.enabled }}
   OMRS_DB: "mariadb"
   OMRS_DB_NAME: {{ .Values.mariadb.auth.database | default "openmrs" | quote }}
+  {{- if .Values.mariadb.galera }}
   OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb"
+  {{- else }}
+  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb-primary"
+  {{- end }}
   {{- else }}
   {{- if .Values.db.url }}
   OMRS_DB_URL: {{ .Values.db.url | quote }}

@@ -47,6 +47,7 @@ mariadb:
         cpu: "1"
         memory: 1Gi
   enabled: false
+  galera: true
 
 elasticsearch:
   enabled: false

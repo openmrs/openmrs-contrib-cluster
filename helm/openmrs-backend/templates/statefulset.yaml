@@ -48,7 +48,11 @@ spec:
             - -c
             - |
               echo "Resolving MariaDB hosts..."
+              {{- if .Values.mariadb.galera }}
               echo "jdbc:mariadb:loadbalance://{{ .Release.Name }}-mariadb.{{ .Release.Namespace }}.svc.cluster.local:3306/$OMRS_DB_NAME?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8" > /work-dir/jdbc-url.txt
+              {{- else }}
+              echo "jdbc:mariadb:replication://{{ .Release.Name }}-mariadb-primary.{{ .Release.Namespace }}.svc.cluster.local:3306,{{ .Release.Name }}-mariadb-secondary.{{ .Release.Namespace }}.svc.cluster.local:3306/$OMRS_DB_NAME?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8" > /work-dir/jdbc-url.txt
+              {{- end }}
               echo "JDBC URL written: $(cat /work-dir/jdbc-url.txt)"
           volumeMounts:
             - name: workdir

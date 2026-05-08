@@ -84,7 +84,7 @@ or from registry:
 
       helm upgrade --install --create-namespace -n openmrs --set global.defaultStorageClass=standard --set global.defaultIngressClass=nginx openmrs openmrs/openmrs
 
-The MariaDB operator always creates a 3-node Galera cluster when `mariadb.enabled=true`.
+By default the operator creates a 3-node Galera cluster. Set `mariadb.galera=false` for a lightweight 2-node primary-replica setup.
 
 
 Once installed you will see instructions on how to configure port-forwarding and access the instance. If you deploy to a cloud provider you will need to adjust the ingress configuration per https://kubernetes.github.io/ingress-nginx/deploy/#cloud-deployments
@@ -117,7 +117,8 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `op
 |------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
 | `openmrs-backend.db.hostname`                                    | Hostname for OpenMRS DB                                                                                                | `""` or defaults to galera or mariadb hostname if enabled |
 | `openmrs-backend.persistance.size`                               | Size of persistent volume to claim (for search index, attachments, etc.)                                               | `"8Gi"`                                                   |
-| `openmrs-backend.mariadb.enabled`                                | Use official MariaDB Kubernetes Operator with 3-node Galera cluster                                                   | `"false"`                                                 |
+| `openmrs-backend.mariadb.enabled`                                | Use official MariaDB Kubernetes Operator                                                                               | `"false"`                                                 |
+| `openmrs-backend.mariadb.galera`                                 | Use 3-node Galera cluster; `false` for 2-node primary-replica                                                          | `"true"`                                                 |
 | `openmrs-backend.mariadb.auth.rootPassword`                      | Password for the `root` user. Ignored if existing secret is provided.                                                  | `"Root123"`                                               |
 | `openmrs-backend.mariadb.auth.database`                          | Name for an OpenMRS database                                                                                           | `"openmrs"`                                               |
 | `openmrs-backend.mariadb.auth.username`                          | Name for a DB user                                                                                                     | `"openmrs"`                                               |
