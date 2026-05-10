@@ -61,12 +61,6 @@ Create the name of the service account to use
 {{- end }}
 {{- end }}
 
-{{/*
-Name of the ECK Elasticsearch custom resource.
-*/}}
-{{/*
-Name of the Elasticsearch CRD created by ECK for the Elasticsearch cluster.
-*/}}
 {{- define "elasticsearch.clusterName" -}}
 {{- printf "%s-elasticsearch-eck" .Release.Name -}}
 {{- end }}

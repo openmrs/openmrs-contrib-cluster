@@ -67,11 +67,8 @@ elasticsearch:
   enabled: false
 
 elasticsearch-eck:
-  # Elasticsearch version deployed by ECK
   version: "8.15.3"
 
-  # nodeSets defines the cluster topology
-  # For local/CI: single node with all roles
   nodeSets:
     - name: default
       count: 1

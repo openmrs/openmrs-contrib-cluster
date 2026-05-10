@@ -28,7 +28,6 @@ data:
   {{- if .Values.elasticsearch.enabled }}
   OMRS_SEARCH: "elasticsearch"
   OMRS_SEARCH_ES_URIS: {{ include "openmrs-elasticsearch.url" . }}
-  # Translates to: property.hibernate.search.backend.ssl.verification_mode=none
   # Allows Hibernate Search to accept ECK's self-signed certificate
   OMRS_EXTRA_HIBERNATE_SEARCH_BACKEND_SSL_VERIFICATION__MODE: "none"
   {{- else if .Values.elasticsearch.uris }}
