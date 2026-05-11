@@ -80,7 +80,7 @@ Create the url for the elastic search
 {{- define "openmrs-elasticsearch.url" -}}
 {{- $releaseNameSpace := .Release.Namespace -}}
 {{- $clusterDomain := "svc.cluster.local" }}
-{{- $port := default "9200"  quote .Values.elasticsearch.service.ports.restAPI }}
+{{- $port := default "9200" (.Values.elasticsearch.service.ports.restAPI | toString) }}
 {{- $fullurl := printf "%s%s.%s.%s:%s" "http://" (include "elasticsearch.serviceName" .) $releaseNameSpace $clusterDomain $port }}
 {{- quote $fullurl }}
 {{- end }}
@@ -104,7 +104,7 @@ Create the url for the minio
 {{- define "openmrs-minio.url" -}}
 {{- $releaseNameSpace := .Release.Namespace -}}
 {{- $clusterDomain := "svc.cluster.local" }}
-{{- $port := default "9000"  quote .Values.minio.containerPorts.api }}
+{{- $port := default "9000" (.Values.minio.containerPorts.api | toString) }}
 {{- $fullurl := printf "%s%s.%s.%s:%s" "http://" (include "minio.serviceName" .) $releaseNameSpace $clusterDomain $port }}
 {{- quote $fullurl }}
 {{- end }}

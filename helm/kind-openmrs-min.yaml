@@ -1,6 +1,6 @@
 global:
   defaultStorageClass: standard
-  defaultIngessClass: nginx
+  defaultIngressClass: nginx
 mariadb:
   auth:
     rootPassword: Root123
