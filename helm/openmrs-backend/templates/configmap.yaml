@@ -30,7 +30,7 @@ data:
   OMRS_SEARCH_ES_URIS: {{ include "openmrs-elasticsearch.url" . }}
   {{- else if .Values.elasticsearch.uris }}
   OMRS_SEARCH: "elasticsearch"
-  OMRS_SEARCH_ES_URIS: .Values.elasticsearch.uris
+  OMRS_SEARCH_ES_URIS: {{ .Values.elasticsearch.uris | quote }}
   {{- end }}
   {{- if .Values.minio.enabled }}
   storage.type: "s3"
