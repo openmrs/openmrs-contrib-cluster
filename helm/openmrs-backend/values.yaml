@@ -87,41 +87,21 @@ elasticsearch-eck:
         xpack.security.authc.anonymous.roles: superuser
         xpack.security.authc.anonymous.authz_exception: false
 
+      plugins:
+        - analysis-phonetic
+
       podTemplate:
         spec:
-          initContainers:
-            - name: sysctl
-              securityContext:
-                privileged: true
-                runAsUser: 0
-              command:
-                - sh
-                - -c
-                - sysctl -w vm.max_map_count=262144
-
           containers:
             - name: elasticsearch
-              env:
-                - name: ES_JAVA_OPTS
-                  value: "-Xmx512m -Xms512m"
-              lifecycle:
-                postStart:
-                  exec:
-                    command:
-                      - sh
-                      - -c
-                      - |
-                        if [ -n "analysis-phonetic" ]; then
-                          bin/elasticsearch-plugin install --batch analysis-phonetic || true
-                        fi
               resources:
                 requests:
                   cpu: 500m
-                  memory: 512Mi
+                  memory: "2Gi"
                   ephemeral-storage: 50Mi
                 limits:
                   cpu: 750m
-                  memory: 768Mi
+                  memory: "2Gi"
                   ephemeral-storage: 2Gi
 
   volumeClaimTemplates:
