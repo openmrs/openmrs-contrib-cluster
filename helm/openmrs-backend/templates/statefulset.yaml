@@ -35,6 +35,16 @@ spec:
       volumes:
         - name: workdir
           emptyDir: { }
+        {{- if .Values.elasticsearch.enabled }}
+        - name: es-ca-cert
+          secret:
+            secretName: {{ .Release.Name }}-elasticsearch-eck-es-http-certs-public
+        - name: es-truststore
+          emptyDir: {}
+        - name: es-cred
+          secret:
+            secretName: {{ .Release.Name }}-elasticsearch-eck-es-elastic-user
+        {{- end }}
 
       {{ if or (.Values.galera.enabled) (.Values.mariadb.enabled) }}
       initContainers:
@@ -82,7 +92,56 @@ spec:
           volumeMounts:
             - name: workdir
               mountPath: /work-dir
-      {{ end }}
+      {{- end }}
+      {{- if .Values.elasticsearch.enabled }}
+        - name: import-es-ca
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          command:
+            - sh
+            - -c
+            - |
+              echo "Importing ECK CA certificate into truststore..."
+              cp "$JAVA_HOME/lib/security/cacerts" /truststore/cacerts 2>/dev/null || \
+              cp /etc/ssl/certs/java/cacerts /truststore/cacerts 2>/dev/null || \
+              keytool -genkey -alias dummy -keystore /truststore/cacerts -storepass changeit -noprompt
+              keytool -import -trustcacerts -alias es-ca \
+                -file /etc/es-ca/ca.crt \
+                -keystore /truststore/cacerts \
+                -storepass changeit -noprompt 2>/dev/null || \
+              echo "Certificate already imported"
+              keytool -list -alias es-ca -keystore /truststore/cacerts -storepass changeit >/dev/null 2>&1 && \
+              echo "ECK CA certificate successfully added to truststore" || \
+              echo "WARNING: Failed to import ECK CA certificate"
+          volumeMounts:
+            - name: es-ca-cert
+              mountPath: /etc/es-ca
+              readOnly: true
+            - name: es-truststore
+              mountPath: /truststore
+        - name: wait-for-elasticsearch
+          image: bitnamilegacy/kubectl:1.33.4
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for ECK Elasticsearch to be ready..."
+              ES_CR="{{ include "elasticsearch.clusterName" . }}"
+              MAX_RETRIES=60
+              RETRY_INTERVAL=5
+              i=0
+              until [ "$(kubectl get elasticsearch $ES_CR -n {{ .Release.Namespace }} -o jsonpath='{.status.health}')" = "green" ] 2>/dev/null || \
+                    [ "$(kubectl get elasticsearch $ES_CR -n {{ .Release.Namespace }} -o jsonpath='{.status.health}')" = "yellow" ] 2>/dev/null; do
+                i=$((i + 1))
+                if [ $i -ge $MAX_RETRIES ]; then
+                  echo "Timeout waiting for Elasticsearch after $((MAX_RETRIES * RETRY_INTERVAL)) seconds."
+                  exit 1
+                fi
+                echo "Elasticsearch not ready yet (attempt $i/$MAX_RETRIES), retrying in ${RETRY_INTERVAL}s..."
+                sleep $RETRY_INTERVAL
+              done
+              echo "Elasticsearch is ready! ($(kubectl get elasticsearch $ES_CR -n {{ .Release.Namespace }} -o jsonpath='{.status.health}'))"
+      {{- end }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -111,6 +170,13 @@ spec:
               mountPath: /work-dir
             - name: data
               mountPath: /openmrs/data
+          {{- if .Values.elasticsearch.enabled }}
+            - name: es-truststore
+              mountPath: /truststore
+            - name: es-cred
+              mountPath: /etc/es-cred
+              readOnly: true
+          {{- end }}
           {{ if or (.Values.galera.enabled) (.Values.mariadb.enabled) }}
           command:
             - sh
@@ -119,6 +185,10 @@ spec:
               echo "Reading JDBC URL from /work-dir/jdbc-url.txt"
               export OMRS_DB_URL=$(cat /work-dir/jdbc-url.txt)
               echo "OMRS_DB_URL=$OMRS_DB_URL"
+              {{- if .Values.elasticsearch.enabled }}
+              export OMRS_EXTRA_HIBERNATE_SEARCH_BACKEND_PASSWORD=$(cat /etc/es-cred/elastic)
+              export JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStore=/truststore/cacerts -Djavax.net.ssl.trustStorePassword=changeit -Dhibernate.search.backend.ssl.verification_mode=none"
+              {{- end }}
               exec /openmrs/startup.sh
           {{ end }}
   {{- if .Values.persistence.enabled }}

@@ -78,7 +78,7 @@ Full internal cluster URL for the ECK-managed Elasticsearch HTTP service.
 {{- define "openmrs-elasticsearch.url" -}}
 {{- $namespace := .Release.Namespace -}}
 {{- $port := "9200" -}}
-{{- printf "https://%s.%s.svc.cluster.local:%s"
+{{- printf "https://%s.%s.svc:%s"
     (include "elasticsearch.serviceName" .)
     $namespace
     $port | quote -}}
