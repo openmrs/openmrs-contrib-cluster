@@ -49,7 +49,7 @@ spec:
       {{ if or (.Values.galera.enabled) (.Values.mariadb.enabled) }}
       initContainers:
         - name: resolve-mariadb-hosts
-          image: bitnamilegacy/kubectl:1.33.4
+          image: alpine/kubectl:1.33.4
           envFrom:
             - configMapRef:
                 name: {{ include "openmrs-backend.fullname" . }}
@@ -119,7 +119,7 @@ spec:
             - name: es-truststore
               mountPath: /truststore
         - name: wait-for-elasticsearch
-          image: bitnamilegacy/kubectl:1.33.4
+          image: alpine/kubectl:1.33.4
           command:
             - sh
             - -c
