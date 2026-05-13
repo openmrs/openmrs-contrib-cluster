@@ -46,8 +46,9 @@ spec:
             secretName: {{ .Release.Name }}-elasticsearch-eck-es-elastic-user
         {{- end }}
 
-      {{ if or (.Values.galera.enabled) (.Values.mariadb.enabled) }}
+      {{- if or .Values.galera.enabled .Values.mariadb.enabled .Values.elasticsearch.enabled }}
       initContainers:
+      {{- if or .Values.galera.enabled .Values.mariadb.enabled }}
         - name: resolve-mariadb-hosts
           image: alpine/kubectl:1.33.4
           envFrom:
