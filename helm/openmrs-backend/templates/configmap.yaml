@@ -28,8 +28,9 @@ data:
   {{- if .Values.elasticsearch.enabled }}
   OMRS_SEARCH: "elasticsearch"
   OMRS_SEARCH_ES_URIS: {{ include "openmrs-elasticsearch.url" . }}
-  # Allows Hibernate Search to accept ECK's self-signed certificate
+  # Skips cert verification for Hibernate Search (workaround)
   OMRS_EXTRA_HIBERNATE_SEARCH_BACKEND_SSL_VERIFICATION__MODE: "none"
+  # Imports ECK's CA into the JVM truststore so Hibernate Search can verify the certificate properly instead of blindly skipping verification.
   JAVA_TOOL_OPTIONS: "-Djavax.net.ssl.trustStore=/truststore/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
   {{- else if .Values.elasticsearch.uris }}
   OMRS_SEARCH: "elasticsearch"

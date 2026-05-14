@@ -39,9 +39,7 @@ openmrs-backend:
             - data
             - ingest
           node.store.allow_mmap: false
-          xpack.security.authc.anonymous.username: anonymous
-          xpack.security.authc.anonymous.roles: superuser
-          xpack.security.authc.anonymous.authz_exception: false
+        
         podTemplate:
           spec:
             initContainers:
@@ -56,11 +54,11 @@ openmrs-backend:
                   requests:
                     cpu: 500m
                     memory: "2Gi"
-                    ephemeral-storage: 50Mi
+                    ephemeral-storage: 2Gi
                   limits:
                     cpu: 750m
                     memory: "2Gi"
-                    ephemeral-storage: 2Gi
+                    ephemeral-storage: 10Gi
 
   minio:
     enabled: true

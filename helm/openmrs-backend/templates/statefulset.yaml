@@ -188,7 +188,7 @@ spec:
               echo "OMRS_DB_URL=$OMRS_DB_URL"
               {{- if .Values.elasticsearch.enabled }}
               export OMRS_EXTRA_HIBERNATE_SEARCH_BACKEND_PASSWORD=$(cat /etc/es-cred/elastic)
-              export JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStore=/truststore/cacerts -Djavax.net.ssl.trustStorePassword=changeit -Dhibernate.search.backend.ssl.verification_mode=none"
+              export JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStore=/truststore/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
               {{- end }}
               exec /openmrs/startup.sh
           {{ end }}

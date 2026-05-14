@@ -71,21 +71,13 @@ elasticsearch-eck:
 
   nodeSets:
     - name: default
-      count: 1
+      count: 3
       config:
         node.roles:
           - master
           - data
           - ingest
         node.store.allow_mmap: false
-
-        # Anonymous access — ECK-supported way to allow unauthenticated
-        # connections from the OpenMRS backend without disabling security.
-        # See: https://www.elastic.co/guide/en/elasticsearch/reference/8.15/anonymous-access.html
-        # WARNING: Only enable in local/CI environments. Never use in production.
-        xpack.security.authc.anonymous.username: anonymous
-        xpack.security.authc.anonymous.roles: superuser
-        xpack.security.authc.anonymous.authz_exception: false
 
       plugins:
         - analysis-phonetic
@@ -98,11 +90,11 @@ elasticsearch-eck:
                 requests:
                   cpu: 500m
                   memory: "2Gi"
-                  ephemeral-storage: 50Mi
+                  ephemeral-storage: 2Gi
                 limits:
                   cpu: 750m
                   memory: "2Gi"
-                  ephemeral-storage: 2Gi
+                  ephemeral-storage: 10Gi
 
   volumeClaimTemplates:
     - metadata:
@@ -112,7 +104,7 @@ elasticsearch-eck:
           - ReadWriteOnce
         resources:
           requests:
-            storage: 8Gi
+            storage: 10Gi
 
 minio:
   enabled: false
