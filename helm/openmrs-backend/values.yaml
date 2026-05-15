@@ -259,7 +259,7 @@ grafana:
   adminPassword: "Admin123"
   grafana.ini: # Needed for serving from path
     server:
-      domain: localhost
+      domain: grafana.local
       root_url: "%(protocol)s://%(domain)s/grafana"
       serve_from_sub_path: true
     dashboards:
@@ -272,7 +272,7 @@ grafana:
   ingress:
     enabled: true
     hosts:
-      - "localhost"
+      - "grafana.local"
     path: '/grafana'
   datasources:
     datasources.yaml:

@@ -146,7 +146,7 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `op
 | `openmrs-backend.monitoring.enabled`                             | Enable monitoring (Grafana, Loki, Alloy)                                                                               | `"false"`                                                 |
 | `openmrs-backend.grafana.adminPassword`                          | Grafana admin password                                                                                                 | `"Admin123"`                                              |
 | `openmrs-backend.grafana.ingress.enabled`                        | Enable ingress for Grafana                                                                                             | `"true"`                                                  |
-| `openmrs-backend.grafana.ingress.hosts`                          | Hosts for Grafana ingress                                                                                              | `["localhost"]`                                           |
+| `openmrs-backend.grafana.ingress.hosts`                          | Hosts for Grafana ingress                                                                                              | `["grafana.local"]`                                       |
 
 See [MariaDB Operator](https://github.com/mariadb-operator/mariadb-operator) for MariaDB CRD parameters.
 

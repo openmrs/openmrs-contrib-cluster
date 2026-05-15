@@ -38,6 +38,7 @@ spec:
 
       {{ if .Values.mariadb.enabled }}
       initContainers:
+      {{- if or .Values.galera.enabled .Values.mariadb.enabled }}
         - name: resolve-mariadb-hosts
           image: alpine/kubectl:1.33.4
           envFrom:
@@ -57,7 +58,31 @@ spec:
           volumeMounts:
             - name: workdir
               mountPath: /work-dir
-      {{ end }}
+      {{- end }}
+      {{- if .Values.elasticsearch.enabled }}
+        - name: wait-for-elasticsearch
+          image: bitnamilegacy/kubectl:1.33.4
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for Elasticsearch statefulset to be ready..."
+              ES_STATEFULSET="{{ .Release.Name }}-elasticsearch-master"
+              MAX_RETRIES=60
+              RETRY_INTERVAL=5
+              i=0
+              until [ "$(kubectl get statefulset $ES_STATEFULSET -n {{ .Release.Namespace }} -o jsonpath='{.status.readyReplicas}')" -gt 0 ] 2>/dev/null; do
+                i=$((i + 1))
+                if [ $i -ge $MAX_RETRIES ]; then
+                  echo "Timeout waiting for Elasticsearch after $((MAX_RETRIES * RETRY_INTERVAL)) seconds."
+                  exit 1
+                fi
+                echo "Elasticsearch not ready yet (attempt $i/$MAX_RETRIES), retrying in ${RETRY_INTERVAL}s..."
+                sleep $RETRY_INTERVAL
+              done
+              echo "Elasticsearch is ready! ($(kubectl get statefulset $ES_STATEFULSET -n {{ .Release.Namespace }} -o jsonpath='{.status.readyReplicas}') replicas ready)"
+      {{- end }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
