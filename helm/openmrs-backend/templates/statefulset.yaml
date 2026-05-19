@@ -35,7 +35,7 @@ spec:
       {{- if .Values.elasticsearch.enabled }}
       initContainers:
         - name: wait-for-elasticsearch
-          image: bitnamilegacy/kubectl:1.33.4
+          image: alpine/kubectl:1.33.4
           command:
             - sh
             - -c
