@@ -32,34 +32,8 @@ spec:
       serviceAccountName: {{ include "openmrs-backend.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      volumes:
-        - name: workdir
-          emptyDir: { }
-
-      {{ if .Values.mariadb.enabled }}
-      initContainers:
-      {{- if or .Values.galera.enabled .Values.mariadb.enabled }}
-        - name: resolve-mariadb-hosts
-          image: alpine/kubectl:1.33.4
-          envFrom:
-            - configMapRef:
-                name: {{ include "openmrs-backend.fullname" . }}
-          command:
-            - sh
-            - -c
-            - |
-              echo "Resolving MariaDB hosts..."
-              {{- if .Values.mariadb.galera }}
-              echo "jdbc:mariadb:loadbalance://{{ .Release.Name }}-mariadb.{{ .Release.Namespace }}.svc.cluster.local:3306/$OMRS_DB_NAME?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8" > /work-dir/jdbc-url.txt
-              {{- else }}
-              echo "jdbc:mariadb:replication://{{ .Release.Name }}-mariadb-primary.{{ .Release.Namespace }}.svc.cluster.local:3306,{{ .Release.Name }}-mariadb-secondary.{{ .Release.Namespace }}.svc.cluster.local:3306/$OMRS_DB_NAME?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8" > /work-dir/jdbc-url.txt
-              {{- end }}
-              echo "JDBC URL written: $(cat /work-dir/jdbc-url.txt)"
-          volumeMounts:
-            - name: workdir
-              mountPath: /work-dir
-      {{- end }}
       {{- if .Values.elasticsearch.enabled }}
+      initContainers:
         - name: wait-for-elasticsearch
           image: bitnamilegacy/kubectl:1.33.4
           command:
@@ -81,7 +55,6 @@ spec:
                 sleep $RETRY_INTERVAL
               done
               echo "Elasticsearch is ready! ($(kubectl get statefulset $ES_STATEFULSET -n {{ .Release.Namespace }} -o jsonpath='{.status.readyReplicas}') replicas ready)"
-      {{- end }}
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
@@ -107,20 +80,8 @@ spec:
             - secretRef:
                 name: {{ include "openmrs-backend.fullname" . }}
           volumeMounts:
-            - name: workdir
-              mountPath: /work-dir
             - name: data
               mountPath: /openmrs/data
-          {{ if .Values.mariadb.enabled }}
-          command:
-            - sh
-            - -c
-            - |
-              echo "Reading JDBC URL from /work-dir/jdbc-url.txt"
-              export OMRS_DB_URL=$(cat /work-dir/jdbc-url.txt)
-              echo "OMRS_DB_URL=$OMRS_DB_URL"
-              exec /openmrs/startup.sh
-          {{ end }}
   {{- if .Values.persistence.enabled }}
   volumeClaimTemplates:
     - metadata:

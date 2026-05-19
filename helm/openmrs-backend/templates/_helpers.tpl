@@ -104,5 +104,7 @@ Create the url for the minio
 {{- define "openmrs-minio.url" -}}
 {{- $releaseNameSpace := .Release.Namespace -}}
 {{- $clusterDomain := "svc.cluster.local" }}
-{{- printf "%s%s.%s.%s:%d" "http://" (include "minio.serviceName" .) $releaseNameSpace $clusterDomain 9000 }}
+{{- $port := default "9000" (.Values.minio.containerPorts.api | toString) }}
+{{- $fullurl := printf "%s%s.%s.%s:%s" "http://" (include "minio.serviceName" .) $releaseNameSpace $clusterDomain $port }}
+{{- quote $fullurl }}
 {{- end }}
