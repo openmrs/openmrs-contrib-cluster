@@ -116,6 +116,14 @@ spec:
                 name: {{ include "openmrs-backend.fullname" . }}
             - secretRef:
                 name: {{ include "openmrs-backend.fullname" . }}
+          {{- if .Values.elasticsearch.enabled }}
+          env:
+            - name: OMRS_EXTRA_HIBERNATE_SEARCH_BACKEND_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-elasticsearch-eck-es-elastic-user
+                  key: elastic
+          {{- end }}
           volumeMounts:
             - name: data
               mountPath: /openmrs/data
