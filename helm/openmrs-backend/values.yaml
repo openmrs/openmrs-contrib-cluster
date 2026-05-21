@@ -68,6 +68,7 @@ elasticsearch:
 
 elasticsearch-eck:
   version: "8.15.3"
+  image: openmrs/openmrs-contrib-elasticsearch:8.15.3
 
   nodeSets:
     - name: default
@@ -78,9 +79,6 @@ elasticsearch-eck:
           - data
           - ingest
         node.store.allow_mmap: false
-
-      plugins:
-        - analysis-phonetic
 
       podTemplate:
         spec:

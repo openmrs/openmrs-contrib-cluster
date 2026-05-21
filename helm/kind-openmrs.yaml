@@ -30,6 +30,7 @@ openmrs-backend:
 
   elasticsearch-eck:
     version: "8.15.3"
+    image: openmrs/openmrs-contrib-elasticsearch:8.15.3
     nodeSets:
       - name: default
         count: 1
@@ -42,12 +43,6 @@ openmrs-backend:
         
         podTemplate:
           spec:
-            initContainers:
-              - name: install-plugins
-                command:
-                  - sh
-                  - -c
-                  - bin/elasticsearch-plugin install --batch analysis-phonetic
             containers:
               - name: elasticsearch
                 resources:
