@@ -33,8 +33,6 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
-        - name: workdir
-          emptyDir: { }
         {{- if .Values.elasticsearch.enabled }}
         - name: es-ca-cert
           secret:
@@ -46,55 +44,8 @@ spec:
             secretName: {{ .Release.Name }}-elasticsearch-eck-es-elastic-user
         {{- end }}
 
-      {{- if or .Values.galera.enabled .Values.mariadb.enabled .Values.elasticsearch.enabled }}
-      initContainers:
-      {{- if or .Values.galera.enabled .Values.mariadb.enabled }}
-        - name: resolve-mariadb-hosts
-          image: alpine/kubectl:1.33.4
-          envFrom:
-            - configMapRef:
-                name: {{ include "openmrs-backend.fullname" . }}
-          command:
-            - sh
-            - -c
-            - |
-              echo "Resolving MariaDB hosts..."
-              HOSTS=""
-              {{ if .Values.galera.enabled }}
-              SERVICE={{ .Release.Name }}-galera
-              STATEFULSET=$SERVICE
-              {{ end }}
-              {{ if .Values.mariadb.enabled }}
-              SERVICE={{ .Release.Name }}-mariadb
-              STATEFULSET=$SERVICE-secondary
-              {{ end }}
-              REPLICA_COUNT=$(kubectl get statefulset $STATEFULSET -n {{ .Release.Namespace }} -o jsonpath='{.spec.replicas}')
-              {{ if .Values.mariadb.enabled }}
-              # Add primary instance
-              HOSTS="$SERVICE-primary-0.${SERVICE}-headless.{{ .Release.Namespace }}.svc.cluster.local"
-              {{ end }}
-              for i in $(seq 0 $((REPLICA_COUNT-1))); do
-                POD_FQDN="$STATEFULSET-${i}.${SERVICE}-headless.{{ .Release.Namespace }}.svc.cluster.local"
-              
-                # Append to HOSTS, separated by comma
-                if [ -z "$HOSTS" ]; then
-                  HOSTS="$POD_FQDN"
-                else
-                  HOSTS="$HOSTS,$POD_FQDN"
-                fi
-              done
-              {{ if .Values.galera.enabled }}
-                MODE="loadbalance"
-              {{ else }}
-                MODE="replication"
-              {{ end }}
-              echo "jdbc:mariadb:$MODE://$HOSTS:3306/$OMRS_DB_NAME?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8" > /work-dir/jdbc-url.txt
-              echo "JDBC URL written: $(cat /work-dir/jdbc-url.txt)"
-          volumeMounts:
-            - name: workdir
-              mountPath: /work-dir
-      {{- end }}
       {{- if .Values.elasticsearch.enabled }}
+      initContainers:
         - name: import-es-ca
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           command:
@@ -175,20 +126,7 @@ spec:
               mountPath: /etc/es-cred
               readOnly: true
           {{- end }}
-          {{ if or (.Values.galera.enabled) (.Values.mariadb.enabled) }}
-          command:
-            - sh
-            - -c
-            - |
-              echo "Reading JDBC URL from /work-dir/jdbc-url.txt"
-              export OMRS_DB_URL=$(cat /work-dir/jdbc-url.txt)
-              echo "OMRS_DB_URL=$OMRS_DB_URL"
-              {{- if .Values.elasticsearch.enabled }}
-              export OMRS_EXTRA_HIBERNATE_SEARCH_BACKEND_PASSWORD=$(cat /etc/es-cred/elastic)
-              export JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStore=/truststore/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
-              {{- end }}
-              exec /openmrs/startup.sh
-          {{ end }}
+
   {{- if .Values.persistence.enabled }}
   volumeClaimTemplates:
     - metadata:
