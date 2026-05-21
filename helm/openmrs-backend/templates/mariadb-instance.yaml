@@ -41,12 +41,14 @@ spec:
     enabled: true
     recovery:
       enabled: true
-  {{- else }}
+  {{- else if gt (int (.Values.mariadb.replicas | default 2)) 1 }}
   replicas: {{ .Values.mariadb.replicas }}
   replication:
     enabled: true
     primary:
       autoFailover: true
+  {{- else }}
+  replicas: {{ .Values.mariadb.replicas }}
   {{- end }}
 
   resources:
