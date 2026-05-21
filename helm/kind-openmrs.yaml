@@ -11,20 +11,8 @@ openmrs-backend:
     clustered: true
   monitoring:
     enabled: true
-  galera:
-    enabled: true
-    replicaCount: 3
-    rootUser:
-      password: Root123
-    db:
-      name: openmrs
-      user: openmrs
-      password: OpenMRS123
-    galera:
-      mariabackup:
-        password: Backup123
   mariadb:
-    enabled: false
+    enabled: true
   elasticsearch:
     enabled: true
     master:

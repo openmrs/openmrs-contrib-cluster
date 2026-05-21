@@ -1,9 +1,9 @@
 dependencies:
 - name: openmrs-backend
   repository: file://../openmrs-backend
-  version: 1.2.2
+  version: 1.3.0
 - name: openmrs-frontend
   repository: file://../openmrs-frontend
   version: 1.2.2
-digest: sha256:d703705602385f3e0ac15cd013db8e2632aea33673ca3865a0b98e53b71566ad
-generated: "2026-02-23T13:58:20.962815871Z"
+digest: sha256:987afabe6b279b1a4ef89339272caad38930c7fbc2607a991032bfc163538033
+generated: "2026-05-08T14:17:26.464249102+03:00"

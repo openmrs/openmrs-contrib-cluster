@@ -26,42 +26,29 @@ db:
   username: openmrs
   password: OpenMRS123
 
-galera:
-  enabled: false
-  image:
-    repository: bitnamilegacy/mariadb-galera
-    tag: 10.11
-  rootUser:
-    password: Root123
-  db:
-    name: openmrs
-    user: openmrs
-    password: OpenMRS123
-  galera:
-    mariabackup:
-      password: Backup123
-
 mariadb:
-  enabled: true
   image:
-    repository: bitnamilegacy/mariadb
-    tag: 10.11
-  architecture: replication
+    repository: mariadb
+    tag: "10.11"
   auth:
     rootPassword: Root123
-    replicationPassword: Replicate123
     database: openmrs
     username: openmrs
     password: OpenMRS123
-
   primary:
     persistence:
       enabled: true
       size: 8Gi
-  secondary:
-    persistence:
-      enabled: true
-      size: 8Gi
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+  enabled: false
+  replicas: 2
+  galera: true
 
 elasticsearch:
   enabled: false
@@ -148,6 +135,9 @@ minio:
     volumePermissions:
       image:
         repository: bitnamilegacy/os-shell
+  containerPorts:
+    api: 9000
+    console: 9001
   console:
     image:
       repository: bitnamilegacy/minio-object-browser
