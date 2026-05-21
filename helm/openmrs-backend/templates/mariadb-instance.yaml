@@ -42,7 +42,7 @@ spec:
     recovery:
       enabled: true
   {{- else }}
-  replicas: 2
+  replicas: {{ .Values.mariadb.replicas }}
   replication:
     enabled: true
     primary:

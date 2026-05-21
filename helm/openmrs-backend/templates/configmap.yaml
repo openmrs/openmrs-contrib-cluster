@@ -12,9 +12,11 @@ data:
   {{- if .Values.mariadb.galera }}
   OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb"
   OMRS_DB_URL: "jdbc:mariadb:loadbalance://{{ .Release.Name }}-mariadb.{{ .Release.Namespace }}.svc.cluster.local:3306/{{ .Values.mariadb.auth.database | default "openmrs" }}?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8"
-  {{- else }}
+  {{- else if gt (int (.Values.mariadb.replicas | default 2)) 1 }}
   OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb-primary"
   OMRS_DB_URL: "jdbc:mariadb:replication://{{ .Release.Name }}-mariadb-primary.{{ .Release.Namespace }}.svc.cluster.local:3306,{{ .Release.Name }}-mariadb-secondary.{{ .Release.Namespace }}.svc.cluster.local:3306/{{ .Values.mariadb.auth.database | default "openmrs" }}?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8"
+  {{- else }}
+  OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb-primary"
   {{- end }}
   {{- else }}
   {{- if .Values.db.url }}
