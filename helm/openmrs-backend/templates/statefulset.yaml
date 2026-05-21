@@ -142,7 +142,6 @@ spec:
               done
               echo "Elasticsearch is ready! ($(kubectl get elasticsearch $ES_CR -n {{ .Release.Namespace }} -o jsonpath='{.status.health}'))"
       {{- end }}
-      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -167,8 +166,6 @@ spec:
             - secretRef:
                 name: {{ include "openmrs-backend.fullname" . }}
           volumeMounts:
-            - name: workdir
-              mountPath: /work-dir
             - name: data
               mountPath: /openmrs/data
           {{- if .Values.elasticsearch.enabled }}
