@@ -1,10 +1,4 @@
 dependencies:
-- name: mariadb
-  repository: oci://registry-1.docker.io/bitnamicharts
-  version: 22.0.0
-- name: mariadb-galera
-  repository: oci://registry-1.docker.io/bitnamicharts
-  version: 16.0.0
 - name: minio
   repository: oci://registry-1.docker.io/bitnamicharts
   version: 17.0.16
@@ -20,5 +14,5 @@ dependencies:
 - name: eck-elasticsearch
   repository: https://helm.elastic.co
   version: 0.19.0
-digest: sha256:aee059a25d3956c8ef5b2242bdc319509c2de6220d7f26744820d2784b415388
-generated: "2026-05-07T14:31:07.260974137+03:00"
+digest: sha256:9e56f8f6f8ea6468c1257c2f9b46fbe84d88b48e6654ba27c2e41f1c139f0eaa
+generated: "2026-05-22T17:54:03.79884724+03:00"
