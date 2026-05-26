@@ -1,0 +1,38 @@
+traefik:
+  providers:
+    kubernetesIngress:
+      enabled: false
+    kubernetesCRD:
+      enabled: true
+    kubernetesGateway:
+      enabled: true
+
+  gateway:
+    enabled: true
+    listeners:
+      web:
+        namespacePolicy: All
+        port: 8000
+        protocol: HTTP
+
+  ports:
+    web:
+      port: 8000
+      expose:
+        default: true
+      exposedPort: 80
+      protocol: TCP
+    websecure:
+      port: 8443
+      expose:
+        default: true
+      exposedPort: 443
+      protocol: TCP
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi

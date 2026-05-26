@@ -1,0 +1,21 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "openmrs-backend.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs-backend.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: openmrs-gateway
+      namespace: kube-system
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: {{ .Values.ingress.path | default "/" }}
+      backendRefs:
+        - name: {{ include "openmrs-backend.fullname" . }}
+          port: {{ .Values.service.port | default 8080 }}
+{{- end }}

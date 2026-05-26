@@ -4,7 +4,6 @@
 
 global:
   defaultStorageClass: "gp2"
-  defaultIngressClass: "nginx"
 
 openmrs-backend:
   nameOverride: "backend"

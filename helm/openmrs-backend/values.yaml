@@ -4,7 +4,6 @@
 
 global:
   defaultStorageClass: "gp2"
-  defaultIngressClass: "nginx"
   security:
     allowInsecureImages: true
 
@@ -164,17 +163,7 @@ service:
 
 ingress:
   enabled: true
-  className: "nginx"
-  annotations:
-    nginx.ingress.kubernetes.io/affinity: "cookie"
-    nginx.ingress.kubernetes.io/session-cookie-name: "http-cookie"
-    nginx.ingress.kubernetes.io/session-cookie-expires: "43200" # 12h
-    nginx.ingress.kubernetes.io/session-cookie-max-age: "43200" # 12h
-  rules:
-    - http:
-      paths:
-        - path: /openmrs/
-          pathType: Prefix
+  path: /openmrs/
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
@@ -197,7 +186,7 @@ livenessProbe:
   periodSeconds: 10
 readinessProbe:
   httpGet:
-    path: /openmrs/health/started
+    path: /openmrs/health/alive
     port: 8080
   failureThreshold: 1
   timeoutSeconds: 1

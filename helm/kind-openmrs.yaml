@@ -1,6 +1,10 @@
 global:
   defaultStorageClass: standard
-  defaultIngressClass: nginx
+openmrs-gateway:
+  traefik:
+    ports:
+      web:
+        hostPort: 80
 openmrs-backend:
   image:
     repository: openmrs/openmrs-reference-application-3-backend

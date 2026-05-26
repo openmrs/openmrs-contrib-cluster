@@ -1,6 +1,10 @@
 global:
   defaultStorageClass: standard
-  defaultIngressClass: nginx
+openmrs-gateway:
+  traefik:
+    ports:
+      web:
+        hostPort: 80
 mariadb:
   auth:
     rootPassword: Root123
