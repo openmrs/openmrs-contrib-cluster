@@ -4,7 +4,7 @@
 
 global:
   defaultStorageClass: "gp2"
-  defaultGatewayClass: "traefik"
+
   security:
     allowInsecureImages: true
 
@@ -165,6 +165,9 @@ service:
 gateway:
   enabled: true
   path: /openmrs/
+  parentRefs:
+    name: traefik-gateway
+    namespace: kube-system
 
 ingress:
   enabled: false

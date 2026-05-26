@@ -33,80 +33,95 @@ Other install options:
 3. https://kind.sigs.k8s.io/docs/user/quick-start/#installing-from-release-binaries
 
 
-Make sure that Docker is running and issue the following commands:
+## Quick Start (Kind for local testing)
 
- 
+Make sure Docker is running, then:
+
+### 1. Create the Kind cluster
+
       cd helm
       kind create cluster --config=kind-config.yaml
 
+The `kind-config.yaml` maps port **80** from your host to the control-plane node
+(needed so Traefik can receive traffic at `localhost:80`).
+
+### 2. Install cluster prerequisites
+
       # Set kubectl context to your local kind cluster
       kubectl cluster-info --context kind-kind
-      
-      # Create local path provisioner (Traefik gateway is deployed via Helm)
+
+      # Local path provisioner (provides PersistentVolumes for MariaDB, ES, etc.)
       kubectl apply -f kind-init.yaml
 
-      # Install Gateway API CRDs (experimental channel; required for URLRewrite filters)
-      kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/experimental-install.yaml
+      # Gateway API CRDs (experimental channel — required for URLRewrite filters)
+      kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.5.1/experimental-install.yaml
 
-      # Setup Kubernetes Dashboard
-      helm repo add kubernetes-dashboard https://kubernetes-retired.github.io/dashboard/
-      helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard --set extraArgs="--token-ttl=0"
-      # Create token for login
-      kubectl -n kubernetes-dashboard create token admin-user
-      kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
-      # Go to https://localhost:8443/ and login with generated token
+      # MariaDB operator (required when openmrs-backend.mariadb.enabled=true)
+      helm repo add mariadb-operator https://helm.mariadb.com
+      helm repo update
+      helm install mariadb-operator-crds mariadb-operator/mariadb-operator-crds
+      helm install mariadb-operator mariadb-operator/mariadb-operator \
+        -n mariadb-system --create-namespace
 
-How to try it out?
-
-#### Prerequisites: ECK Operator
-
-If you intend to use `elasticsearch.enabled=true`, the ECK operator must be installed
-in the cluster first (one-time setup per cluster):
-
+      # ECK operator (required when openmrs-backend.elasticsearch.enabled=true)
       helm repo add elastic https://helm.elastic.co
       helm repo update
       helm install elastic-operator elastic/eck-operator \
         -n elastic-system --create-namespace
 
-The operator watches for `Elasticsearch` custom resources and manages their lifecycle.
-It runs in the `elastic-system` namespace and is independent of the OpenMRS release.
+### 3. Deploy Traefik (edge router)
 
-From local source (install infrastructure gateway first, then application charts):
+Traefik is installed **standalone** (not as a subchart of OpenMRS).
+It uses the Gateway API to route traffic to the OpenMRS services.
 
-      helm dependency update ./traefik-gateway
-      helm upgrade --install traefik-gateway ./traefik-gateway -n kube-system --create-namespace
+      helm repo add traefik https://traefik.github.io/charts
+      helm install traefik traefik/traefik -n kube-system \
+        --values kind-traefik.yaml
+
+This configures:
+- `hostPort: 80` on the control-plane node → accessible at `localhost:80`
+- Gateway listener accepting routes from **all** namespaces
+- The `traefik` GatewayClass for the Gateway API
+
+### 4. Deploy OpenMRS
 
       helm dependency update ./openmrs
-      helm upgrade --install --create-namespace -n openmrs --values kind-openmrs.yaml openmrs ./openmrs
+      helm upgrade --install --create-namespace -n openmrs \
+        --values kind-openmrs.yaml openmrs ./openmrs
 
-or from registry:
+### 5. Access the application
 
-      helm repo add openmrs https://openmrs.github.io/openmrs-contrib-cluster/
-
-      helm upgrade --install --create-namespace -n openmrs --set global.defaultStorageClass=standard openmrs openmrs/openmrs
-
-or if you want to use mariadb-galera cluster instead of mariadb with basic primary-secondary replication:
-
-      helm upgrade --install --create-namespace -n openmrs --set global.defaultStorageClass=standard --set openmrs-backend.mariadb.enabled=false --set openmrs-backend.galera.enabled=true openmrs openmrs/openmrs
-
-
-Once installed you will see instructions on how to configure port-forwarding and access the instance. Edge routing uses the Kubernetes Gateway API with Traefik (see `helm/traefik-gateway`).
-
-or if you want to use mariadb-galera cluster instead of mariadb with basic primary-secondary replication:
-
-      helm upgrade --install --create-namespace -n openmrs --set global.defaultStorageClass=standard --set openmrs-backend.mariadb.enabled=false --set openmrs-backend.galera.enabled=true openmrs openmrs/openmrs
-
-
-Once installed you will see instructions on how to configure port-forwarding and access the instance. Edge routing uses the Kubernetes Gateway API with Traefik (see `helm/openmrs-gateway`).
-
-If running locally with Kind (hostPort 80 on Traefik), OpenMRS is available at:
+Edge routing uses the Kubernetes Gateway API with Traefik.
+Once all pods are ready (`kubectl wait --for=condition=ready pod -n openmrs --all --timeout=600s`),
+OpenMRS is available directly at:
 
       http://localhost/openmrs/
       http://localhost/openmrs/spa/home
 
-If port-forwarding instead:
+No port-forwarding needed — Traefik binds port 80 directly.
 
-      kubectl -n kube-system port-forward svc/traefik-gateway-traefik 8080:80
+### Alternative: install from Helm registry
+
+      helm repo add openmrs https://openmrs.github.io/openmrs-contrib-cluster/
+      helm upgrade --install --create-namespace -n openmrs \
+        --set global.defaultStorageClass=standard openmrs openmrs/openmrs
+
+To use a MariaDB Galera cluster instead of basic primary-secondary replication:
+
+      helm upgrade --install --create-namespace -n openmrs \
+        --set global.defaultStorageClass=standard \
+        --set openmrs-backend.mariadb.enabled=false \
+        --set openmrs-backend.galera.enabled=true openmrs openmrs/openmrs
+
+### Kubernetes Dashboard (optional)
+
+      helm repo add kubernetes-dashboard https://kubernetes-retired.github.io/dashboard/
+      helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
+        --create-namespace --namespace kubernetes-dashboard \
+        --set extraArgs="--token-ttl=0"
+      kubectl -n kubernetes-dashboard create token admin-user
+      kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
+      # Go to https://localhost:8443/ and login with generated token
 
 #### Parameters
 

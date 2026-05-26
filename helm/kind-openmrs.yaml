@@ -1,10 +1,5 @@
 global:
   defaultStorageClass: standard
-traefik-gateway:
-  traefik:
-    ports:
-      web:
-        hostPort: 80
 openmrs-backend:
   image:
     repository: openmrs/openmrs-reference-application-3-backend

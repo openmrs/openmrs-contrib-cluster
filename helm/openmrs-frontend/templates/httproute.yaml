@@ -8,8 +8,8 @@ metadata:
     {{- include "openmrs-frontend.labels" . | nindent 4 }}
 spec:
   parentRefs:
-    - name: traefik-gateway
-      namespace: kube-system
+    - name: {{ .Values.gateway.parentRefs.name }}
+      namespace: {{ .Values.gateway.parentRefs.namespace }}
   rules:
     - matches:
         - path:

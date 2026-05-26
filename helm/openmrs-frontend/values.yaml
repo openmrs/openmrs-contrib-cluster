@@ -49,6 +49,9 @@ service:
 gateway:
   enabled: true
   path: /openmrs/spa
+  parentRefs:
+    name: traefik-gateway
+    namespace: kube-system
 
 ingress:
   enabled: false
