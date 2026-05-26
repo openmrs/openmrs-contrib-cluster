@@ -4,6 +4,7 @@
 
 global:
   defaultStorageClass: "gp2"
+  defaultGatewayClass: "traefik"
   security:
     allowInsecureImages: true
 
@@ -161,9 +162,23 @@ service:
   type: ClusterIP
   port: 8080
 
-ingress:
+gateway:
   enabled: true
   path: /openmrs/
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "http-cookie"
+    nginx.ingress.kubernetes.io/session-cookie-expires: "43200"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "43200"
+  rules:
+    - http:
+      paths:
+        - path: /openmrs/
+          pathType: Prefix
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
@@ -179,24 +194,24 @@ resources:
 
 livenessProbe:
   httpGet:
-    path: /openmrs/health/alive
+    path: /openmrs/health/started
     port: 8080
   failureThreshold: 3
   timeoutSeconds: 1
   periodSeconds: 10
 readinessProbe:
   httpGet:
-    path: /openmrs/health/alive
+    path: /openmrs/health/started
     port: 8080
   failureThreshold: 1
   timeoutSeconds: 1
   periodSeconds: 10
 startupProbe:
   httpGet:
-    path: /openmrs/health/alive
+    path: /openmrs/health/started
     port: 8080
   initialDelaySeconds: 20
-  failureThreshold: 120 # wait for max 20 minutes to startup
+  failureThreshold: 120
   timeoutSeconds: 1
   periodSeconds: 10
 

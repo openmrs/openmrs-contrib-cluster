@@ -42,8 +42,11 @@ Make sure that Docker is running and issue the following commands:
       # Set kubectl context to your local kind cluster
       kubectl cluster-info --context kind-kind
       
-      # Create local path provisioner and ingress
+      # Create local path provisioner (Traefik gateway is deployed via Helm)
       kubectl apply -f kind-init.yaml
+
+      # Install Gateway API CRDs (experimental channel; required for URLRewrite filters)
+      kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/experimental-install.yaml
 
       # Setup Kubernetes Dashboard
       helm repo add kubernetes-dashboard https://kubernetes-retired.github.io/dashboard/
@@ -52,25 +55,6 @@ Make sure that Docker is running and issue the following commands:
       kubectl -n kubernetes-dashboard create token admin-user
       kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
       # Go to https://localhost:8443/ and login with generated token
-
-#### Prerequisites: MariaDB Operator
-
-If you intend to use `mariadb.enabled=true`, install the operator
-before deploying the OpenMRS chart. Two charts are required:
-
-      helm repo add mariadb-operator https://helm.mariadb.com/mariadb-operator
-      helm repo update
-
-      # Install CRDs first (mandatory separate step)
-      helm install mariadb-operator-crds mariadb-operator/mariadb-operator-crds \
-        -n mariadb-system --create-namespace
-
-      # Install the operator
-      helm install mariadb-operator mariadb-operator/mariadb-operator \
-        -n mariadb-system --create-namespace --wait
-
-The operator watches for `MariaDB` custom resources across all namespaces
-and manages their full lifecycle including Galera cluster recovery.
 
 How to try it out?
 
@@ -87,24 +71,42 @@ in the cluster first (one-time setup per cluster):
 The operator watches for `Elasticsearch` custom resources and manages their lifecycle.
 It runs in the `elastic-system` namespace and is independent of the OpenMRS release.
 
-From local source:
+From local source (install infrastructure gateway first, then application charts):
 
-      helm upgrade --install --create-namespace -n openmrs --values ../kind-openmrs.yaml openmrs .
+      helm dependency update ./traefik-gateway
+      helm upgrade --install traefik-gateway ./traefik-gateway -n kube-system --create-namespace
+
+      helm dependency update ./openmrs
+      helm upgrade --install --create-namespace -n openmrs --values kind-openmrs.yaml openmrs ./openmrs
 
 or from registry:
 
       helm repo add openmrs https://openmrs.github.io/openmrs-contrib-cluster/
 
-      helm upgrade --install --create-namespace -n openmrs --set global.defaultStorageClass=standard --set global.defaultIngressClass=nginx openmrs openmrs/openmrs
+      helm upgrade --install --create-namespace -n openmrs --set global.defaultStorageClass=standard openmrs openmrs/openmrs
 
-By default the operator creates a 3-node Galera cluster. Set `mariadb.galera=false` for a lightweight 2-node primary-replica setup.
+or if you want to use mariadb-galera cluster instead of mariadb with basic primary-secondary replication:
+
+      helm upgrade --install --create-namespace -n openmrs --set global.defaultStorageClass=standard --set openmrs-backend.mariadb.enabled=false --set openmrs-backend.galera.enabled=true openmrs openmrs/openmrs
 
 
-Once installed you will see instructions on how to configure port-forwarding and access the instance. If you deploy to a cloud provider you will need to adjust the ingress configuration per https://kubernetes.github.io/ingress-nginx/deploy/#cloud-deployments
+Once installed you will see instructions on how to configure port-forwarding and access the instance. Edge routing uses the Kubernetes Gateway API with Traefik (see `helm/traefik-gateway`).
 
-If running locally run:
+or if you want to use mariadb-galera cluster instead of mariadb with basic primary-secondary replication:
 
-      kubectl -n ingress-nginx port-forward svc/ingress-nginx-controller 8080:80
+      helm upgrade --install --create-namespace -n openmrs --set global.defaultStorageClass=standard --set openmrs-backend.mariadb.enabled=false --set openmrs-backend.galera.enabled=true openmrs openmrs/openmrs
+
+
+Once installed you will see instructions on how to configure port-forwarding and access the instance. Edge routing uses the Kubernetes Gateway API with Traefik (see `helm/openmrs-gateway`).
+
+If running locally with Kind (hostPort 80 on Traefik), OpenMRS is available at:
+
+      http://localhost/openmrs/
+      http://localhost/openmrs/spa/home
+
+If port-forwarding instead:
+
+      kubectl -n kube-system port-forward svc/traefik-gateway-traefik 8080:80
 
 #### Parameters
 
@@ -116,7 +118,7 @@ If running locally run:
 
 #### Common parameters
 
-Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `openrms-gateway`, `openmrs-backend.mariadb`.
+Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `traefik-gateway`, `openmrs-backend.mariadb`, `openmrs-backend.galera`.
 
 | Name                | Description                  | Default Value                                            |
 |---------------------|------------------------------|----------------------------------------------------------|
@@ -130,9 +132,10 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `op
 |------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
 | `openmrs-backend.db.hostname`                                    | Hostname for OpenMRS DB                                                                                                | `""` or defaults to galera or mariadb hostname if enabled |
 | `openmrs-backend.persistance.size`                               | Size of persistent volume to claim (for search index, attachments, etc.)                                               | `"8Gi"`                                                   |
-| `openmrs-backend.mariadb.enabled`                                | Use official MariaDB Kubernetes Operator                                                                               | `"false"`                                                 |
-| `openmrs-backend.mariadb.galera`                                 | Use 3-node Galera cluster; `false` for 2-node primary-replica                                                          | `"true"`                                                 |
-| `openmrs-backend.mariadb.auth.rootPassword`                      | Password for the `root` user. Ignored if existing secret is provided.                                                  | `"Root123"`                                               |
+| `openmrs-backend.mariadb.enabled`                                | Create MariaDB with read-only replica                                                                                  | `"true"`                                                  |
+| `openmrs-backend.mariadb.primary.persistence.storageClass`       | MariaDB primary persistent volume storage Class                                                                        | `global.defaultStorageClass`                              |
+| `openmrs-backend.mariadb.secondary.persistence.storageClass`     | MariaDB secondary persistent volume storage Class                                                                      | `global.defaultStorageClass`                              |
+| `openmrs-backend.mariadb.auth.rootPassword`                      | Password for the `root` user. Ignored if existing secret is provided.                                                  | `"true"`                                                  |
 | `openmrs-backend.mariadb.auth.database`                          | Name for an OpenMRS database                                                                                           | `"openmrs"`                                               |
 | `openmrs-backend.mariadb.auth.username`                          | Name for a DB user                                                                                                     | `"openmrs"`                                               |
 | `openmrs-backend.mariadb.auth.password`                          | Name for a DB user's password                                                                                          | `"OpenMRS123"`                                            |
@@ -155,7 +158,7 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `op
 | `openmrs-backend.grafana.ingress.enabled`                        | Enable ingress for Grafana                                                                                             | `"true"`                                                  |
 | `openmrs-backend.grafana.ingress.hosts`                          | Hosts for Grafana ingress                                                                                              | `["grafana.local"]`                                       |
 
-See [MariaDB Operator](https://github.com/mariadb-operator/mariadb-operator) for MariaDB CRD parameters.
+See [MariaDB](https://github.com/bitnami/charts/blob/main/bitnami/mariadb/README.md) helm chart for other MariaDB parameters.
 
 See [ECK Elasticsearch configuration](https://www.elastic.co/docs/deploy-manage/deploy/cloud-on-k8s/elasticsearch-configuration)
 for full configuration options. The ECK operator must be installed as a cluster prerequisite
@@ -275,7 +278,7 @@ To install Helm Charts from source run (see above for possible settings):
       helm upgrade --install --create-namespace -n openmrs --values ../kind-openmrs.yaml openmrs .
 
 
-If you made any changes in helm/openmrs-backend or helm/openmrs-frontend or helm/openmrs-gateway you need to update 
+If you made any changes in helm/openmrs-backend or helm/openmrs-frontend or helm/traefik-gateway you need to update 
 dependencies and run helm upgrade.
 
 

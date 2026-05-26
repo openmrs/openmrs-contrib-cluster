@@ -1,6 +1,6 @@
 global:
   defaultStorageClass: standard
-openmrs-gateway:
+traefik-gateway:
   traefik:
     ports:
       web:

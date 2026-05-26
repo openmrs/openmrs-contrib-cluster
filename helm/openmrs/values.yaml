@@ -4,6 +4,7 @@
 
 global:
   defaultStorageClass: "gp2"
+  defaultIngressClass: "traefik"
 
 openmrs-backend:
   nameOverride: "backend"

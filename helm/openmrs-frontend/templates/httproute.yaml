@@ -1,4 +1,4 @@
-{{- if .Values.ingress.enabled }}
+{{- if .Values.gateway.enabled }}
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -8,13 +8,13 @@ metadata:
     {{- include "openmrs-frontend.labels" . | nindent 4 }}
 spec:
   parentRefs:
-    - name: openmrs-gateway
+    - name: traefik-gateway
       namespace: kube-system
   rules:
     - matches:
         - path:
             type: PathPrefix
-            value: {{ .Values.ingress.path | default "/openmrs/spa" }}
+            value: {{ .Values.gateway.path | default "/openmrs/spa" }}
       filters:
         - type: URLRewrite
           urlRewrite:

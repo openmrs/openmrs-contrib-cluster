@@ -5,12 +5,12 @@ and waiting for all pods to be ready:
 
 kubectl get pods -n {{ .Release.Namespace }}
 
-To access the service via Ingress Nginx run:
-   kubectl -n ingress-nginx port-forward svc/ingress-nginx-controller 8080:80
+To access the service via Traefik Gateway API, install traefik-gateway in kube-system first, then port-forward:
+   kubectl -n kube-system port-forward svc/traefik-gateway-traefik 8080:80
 
-NOTE: In case port-forward command does not work, make sure that Ingress Controller name is correct.
-      Check the services in Ingress Nginx (e.g. ingress-nginx) namespace using:
-        kubectl -n ingress-nginx get svc
+NOTE: In case port-forward command does not work, list Traefik services in kube-system:
+        kubectl -n kube-system get svc -l app.kubernetes.io/name=traefik
 
 OpenMRS will be available at:
-  http://localhost:8080
+  http://localhost:8080/openmrs/
+  http://localhost:8080/openmrs/spa/home

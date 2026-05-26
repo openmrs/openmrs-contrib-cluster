@@ -2,6 +2,9 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+global:
+  defaultIngressClass: "traefik"
+
 enabled: true
 
 replicaCount: 2
@@ -43,9 +46,22 @@ service:
   type: ClusterIP
   port: 80
 
-ingress:
+gateway:
   enabled: true
   path: /openmrs/spa
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/app-root: /openmrs/spa/home
+  rules:
+    - http:
+      paths:
+        - path: /openmrs/spa(/|$)(.*)
+          pathType: ImplementationSpecific
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
