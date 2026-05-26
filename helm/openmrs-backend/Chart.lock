@@ -1,7 +1,4 @@
 dependencies:
-- name: elasticsearch
-  repository: oci://registry-1.docker.io/bitnamicharts
-  version: 22.0.0
 - name: minio
   repository: oci://registry-1.docker.io/bitnamicharts
   version: 17.0.16
@@ -14,5 +11,8 @@ dependencies:
 - name: alloy
   repository: https://grafana.github.io/helm-charts
   version: 1.6.0
-digest: sha256:3087b536a5972a43f7442651ffe24205e1670444c9882eae2c5839d37f5dbf39
-generated: "2026-05-08T13:41:54.728543745+03:00"
+- name: eck-elasticsearch
+  repository: https://helm.elastic.co
+  version: 0.19.0
+digest: sha256:9e56f8f6f8ea6468c1257c2f9b46fbe84d88b48e6654ba27c2e41f1c139f0eaa
+generated: "2026-05-22T17:54:03.79884724+03:00"

@@ -61,28 +61,27 @@ Create the name of the service account to use
 {{- end }}
 {{- end }}
 
-{{/*
-Get the service name of elastic search created by bitmani elastic helm chart
-*/}}
-{{- define "elasticsearch.serviceName" -}}
-{{- $name := "elasticsearch" -}}
-{{- $releaseName := regexReplaceAll "(-?[^a-z\\d\\-])+-?" (lower .Release.Name) "-" -}}
-{{- if contains $name $releaseName -}}
-{{- $releaseName | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s-%s" $releaseName $name | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
+{{- define "elasticsearch.clusterName" -}}
+{{- printf "%s-elasticsearch-eck" .Release.Name -}}
 {{- end }}
 
 {{/*
-Create the url for the elastic search
+HTTP service name created by ECK for the Elasticsearch cluster.
+*/}}
+{{- define "elasticsearch.serviceName" -}}
+{{- printf "%s-es-http" (include "elasticsearch.clusterName" .) -}}
+{{- end }}
+
+{{/*
+Full internal cluster URL for the ECK-managed Elasticsearch HTTP service.
 */}}
 {{- define "openmrs-elasticsearch.url" -}}
-{{- $releaseNameSpace := .Release.Namespace -}}
-{{- $clusterDomain := "svc.cluster.local" }}
-{{- $port := default "9200" (.Values.elasticsearch.service.ports.restAPI | toString) }}
-{{- $fullurl := printf "%s%s.%s.%s:%s" "http://" (include "elasticsearch.serviceName" .) $releaseNameSpace $clusterDomain $port }}
-{{- quote $fullurl }}
+{{- $namespace := .Release.Namespace -}}
+{{- $port := "9200" -}}
+{{- printf "https://%s.%s.svc:%s"
+    (include "elasticsearch.serviceName" .)
+    $namespace
+    $port | quote -}}
 {{- end }}
 
 {{/*

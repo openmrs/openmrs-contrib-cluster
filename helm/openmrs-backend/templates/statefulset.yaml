@@ -32,20 +32,57 @@ spec:
       serviceAccountName: {{ include "openmrs-backend.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        {{- if .Values.elasticsearch.enabled }}
+        - name: es-ca-cert
+          secret:
+            secretName: {{ .Release.Name }}-elasticsearch-eck-es-http-certs-public
+        - name: es-truststore
+          emptyDir: {}
+        - name: es-cred
+          secret:
+            secretName: {{ .Release.Name }}-elasticsearch-eck-es-elastic-user
+        {{- end }}
+
       {{- if .Values.elasticsearch.enabled }}
       initContainers:
+        - name: import-es-ca
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          command:
+            - sh
+            - -c
+            - |
+              echo "Importing ECK CA certificate into truststore..."
+              cp "$JAVA_HOME/lib/security/cacerts" /truststore/cacerts 2>/dev/null || \
+              cp /etc/ssl/certs/java/cacerts /truststore/cacerts 2>/dev/null || \
+              keytool -genkey -alias dummy -keystore /truststore/cacerts -storepass changeit -noprompt
+              keytool -import -trustcacerts -alias es-ca \
+                -file /etc/es-ca/ca.crt \
+                -keystore /truststore/cacerts \
+                -storepass changeit -noprompt 2>/dev/null || \
+              echo "Certificate already imported"
+              keytool -list -alias es-ca -keystore /truststore/cacerts -storepass changeit >/dev/null 2>&1 && \
+              echo "ECK CA certificate successfully added to truststore" || \
+              echo "WARNING: Failed to import ECK CA certificate"
+          volumeMounts:
+            - name: es-ca-cert
+              mountPath: /etc/es-ca
+              readOnly: true
+            - name: es-truststore
+              mountPath: /truststore
         - name: wait-for-elasticsearch
           image: alpine/kubectl:1.33.4
           command:
             - sh
             - -c
             - |
-              echo "Waiting for Elasticsearch statefulset to be ready..."
-              ES_STATEFULSET="{{ .Release.Name }}-elasticsearch-master"
+              echo "Waiting for ECK Elasticsearch to be ready..."
+              ES_CR="{{ include "elasticsearch.clusterName" . }}"
               MAX_RETRIES=60
               RETRY_INTERVAL=5
               i=0
-              until [ "$(kubectl get statefulset $ES_STATEFULSET -n {{ .Release.Namespace }} -o jsonpath='{.status.readyReplicas}')" -gt 0 ] 2>/dev/null; do
+              until [ "$(kubectl get elasticsearch $ES_CR -n {{ .Release.Namespace }} -o jsonpath='{.status.health}')" = "green" ] 2>/dev/null || \
+                    [ "$(kubectl get elasticsearch $ES_CR -n {{ .Release.Namespace }} -o jsonpath='{.status.health}')" = "yellow" ] 2>/dev/null; do
                 i=$((i + 1))
                 if [ $i -ge $MAX_RETRIES ]; then
                   echo "Timeout waiting for Elasticsearch after $((MAX_RETRIES * RETRY_INTERVAL)) seconds."
@@ -54,7 +91,7 @@ spec:
                 echo "Elasticsearch not ready yet (attempt $i/$MAX_RETRIES), retrying in ${RETRY_INTERVAL}s..."
                 sleep $RETRY_INTERVAL
               done
-              echo "Elasticsearch is ready! ($(kubectl get statefulset $ES_STATEFULSET -n {{ .Release.Namespace }} -o jsonpath='{.status.readyReplicas}') replicas ready)"
+              echo "Elasticsearch is ready! ($(kubectl get elasticsearch $ES_CR -n {{ .Release.Namespace }} -o jsonpath='{.status.health}'))"
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
@@ -79,9 +116,25 @@ spec:
                 name: {{ include "openmrs-backend.fullname" . }}
             - secretRef:
                 name: {{ include "openmrs-backend.fullname" . }}
+          {{- if .Values.elasticsearch.enabled }}
+          env:
+            - name: OMRS_EXTRA_HIBERNATE_SEARCH_BACKEND_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-elasticsearch-eck-es-elastic-user
+                  key: elastic
+          {{- end }}
           volumeMounts:
             - name: data
               mountPath: /openmrs/data
+          {{- if .Values.elasticsearch.enabled }}
+            - name: es-truststore
+              mountPath: /truststore
+            - name: es-cred
+              mountPath: /etc/es-cred
+              readOnly: true
+          {{- end }}
+
   {{- if .Values.persistence.enabled }}
   volumeClaimTemplates:
     - metadata:

@@ -52,77 +52,44 @@ mariadb:
 
 elasticsearch:
   enabled: false
-  image:
-    repository: bitnamilegacy/elasticsearch
-    tag: 9.1.2
-  volumePermissions:
-    image:
-      repository: bitnamilegacy/os-shell
-  sysctlImage:
-    repository: bitnamilegacy/os-shell
-  service:
-    ports:
-      restAPI: 9200
-  plugins: "analysis-phonetic"
-  # Set up Elastic search as single node
-  master:
-    masterOnly: false
-    replicaCount: 1
-    heapSize: 128m
-    resources:
-      limits:
-        cpu: 750m
-        ephemeral-storage: 2Gi
-        memory: 768Mi
-      requests:
-        cpu: 500m
-        ephemeral-storage: 50Mi
-        memory: 512Mi
-    persistence:
-      enabled: true
-      size: 8Gi
 
-  data:
-    replicaCount: 0
-    heapSize: 1024m
-    resources:
-      limits:
-        cpu: 750m
-        ephemeral-storage: 2Gi
-        memory: 1536Mi
-      requests:
-        cpu: 500m
-        ephemeral-storage: 50Mi
-        memory: 1024Mi
-    persistence:
-      enabled: true
-      size: 8Gi
+elasticsearch-eck:
+  version: "8.15.3"
+  image: openmrs/openmrs-contrib-elasticsearch:8.15.3
 
-  coordinating:
-    replicaCount: 0
-    heapSize: 128m
-    resources:
-      limits:
-        cpu: 750m
-        ephemeral-storage: 2Gi
-        memory: 768Mi
-      requests:
-        cpu: 500m
-        ephemeral-storage: 50Mi
-        memory: 512Mi
+  nodeSets:
+    - name: default
+      count: 3
+      config:
+        node.roles:
+          - master
+          - data
+          - ingest
+        node.store.allow_mmap: false
 
-  ingest:
-    replicaCount: 0
-    heapSize: 128m
-    resources:
-      limits:
-        cpu: 750m
-        ephemeral-storage: 2Gi
-        memory: 768Mi
-      requests:
-        cpu: 500m
-        ephemeral-storage: 50Mi
-        memory: 512Mi
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                requests:
+                  cpu: 500m
+                  memory: "2Gi"
+                  ephemeral-storage: 2Gi
+                limits:
+                  cpu: 750m
+                  memory: "2Gi"
+                  ephemeral-storage: 10Gi
+
+  volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
 
 minio:
   enabled: false
