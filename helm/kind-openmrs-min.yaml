@@ -12,6 +12,3 @@ mariadb:
     database: openmrs
     username: openmrs
     password: OpenMRS123
-
-
-
