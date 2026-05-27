@@ -11,11 +11,6 @@ traefik:
 
   gateway:
     enabled: false
-    listeners:
-      web:
-        namespacePolicy: All
-        port: 8000
-        protocol: HTTP
 
   ports:
     web:
