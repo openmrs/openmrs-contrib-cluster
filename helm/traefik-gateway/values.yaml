@@ -10,7 +10,7 @@ traefik:
       enabled: true
 
   gateway:
-    enabled: true
+    enabled: false
     listeners:
       web:
         namespacePolicy: All
