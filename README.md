@@ -150,7 +150,7 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `tr
 | `openmrs-backend.mariadb.enabled`                                | Create MariaDB with read-only replica                                                                                  | `"true"`                                                  |
 | `openmrs-backend.mariadb.primary.persistence.storageClass`       | MariaDB primary persistent volume storage Class                                                                        | `global.defaultStorageClass`                              |
 | `openmrs-backend.mariadb.secondary.persistence.storageClass`     | MariaDB secondary persistent volume storage Class                                                                      | `global.defaultStorageClass`                              |
-| `openmrs-backend.mariadb.auth.rootPassword`                      | Password for the `root` user. Ignored if existing secret is provided.                                                  | `"true"`                                                  |
+| `openmrs-backend.mariadb.auth.rootPassword`                      | Password for the `root` user. Ignored if existing secret is provided.                                                  | `"Root123"`                                               |
 | `openmrs-backend.mariadb.auth.database`                          | Name for an OpenMRS database                                                                                           | `"openmrs"`                                               |
 | `openmrs-backend.mariadb.auth.username`                          | Name for a DB user                                                                                                     | `"openmrs"`                                               |
 | `openmrs-backend.mariadb.auth.password`                          | Name for a DB user's password                                                                                          | `"OpenMRS123"`                                            |
@@ -173,7 +173,7 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `tr
 | `openmrs-backend.grafana.ingress.enabled`                        | Enable ingress for Grafana                                                                                             | `"true"`                                                  |
 | `openmrs-backend.grafana.ingress.hosts`                          | Hosts for Grafana ingress                                                                                              | `["grafana.local"]`                                       |
 
-See [MariaDB](https://github.com/bitnami/charts/blob/main/bitnami/mariadb/README.md) helm chart for other MariaDB parameters.
+See [MariaDB Operator](https://github.com/mariadb-operator/mariadb-operator) for MariaDB CRD parameters.
 
 See [ECK Elasticsearch configuration](https://www.elastic.co/docs/deploy-manage/deploy/cloud-on-k8s/elasticsearch-configuration)
 for full configuration options. The ECK operator must be installed as a cluster prerequisite
