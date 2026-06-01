@@ -162,12 +162,11 @@ service:
   type: ClusterIP
   port: 8080
 
-gateway:
-  enabled: true
-  path: /openmrs/
-  parentRefs:
-    name: traefik-gateway
-    namespace: kube-system
+traefikService:
+  enabled: false
+
+ingressRoute:
+  enabled: false
 
 ingress:
   enabled: false
