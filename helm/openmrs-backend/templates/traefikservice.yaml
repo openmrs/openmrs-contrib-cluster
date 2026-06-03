@@ -15,6 +15,6 @@ spec:
         sticky:
           cookie:
             name: openmrs_session
-            secure: false
+            secure: {{ .Values.traefikService.sticky.cookie.secure | default false }}
             httpOnly: true
 {{- end }}

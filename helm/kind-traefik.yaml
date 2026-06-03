@@ -1,10 +1,15 @@
-# Gateway API provider
+# Gateway API and CRD providers (no legacy Ingress)
 providers:
+  kubernetesIngress:
+    enabled: false
+  kubernetesCRD:
+    enabled: true
   kubernetesGateway:
     enabled: true
 
-# Gateway listener
+# Gateway listener (creates a Gateway named after the release)
 gateway:
+  enabled: true
   listeners:
     web:
       port: 8000

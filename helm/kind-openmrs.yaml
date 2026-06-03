@@ -14,7 +14,7 @@ openmrs-backend:
     failureThreshold: 360
     timeoutSeconds: 1
     periodSeconds: 10
-  ingressRoute:
+  gateway:
     enabled: true
   traefikService:
     enabled: true
