@@ -170,7 +170,7 @@ gateway:
     namespace: kube-system
 
 traefikService:
-  enabled: true
+  enabled: false
   sticky:
     cookie:
       secure: false

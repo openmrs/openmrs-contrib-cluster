@@ -16,8 +16,6 @@ openmrs-backend:
     periodSeconds: 10
   gateway:
     enabled: true
-  traefikService:
-    enabled: true
   infinispan:
     clustered: true
   monitoring:
