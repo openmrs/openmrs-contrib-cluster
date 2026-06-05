@@ -1,0 +1,38 @@
+# Gateway API and CRD providers (no legacy Ingress)
+providers:
+  kubernetesIngress:
+    enabled: false
+  kubernetesCRD:
+    enabled: true
+  kubernetesGateway:
+    enabled: true
+
+# Gateway listener (creates a Gateway named after the release)
+gateway:
+  enabled: true
+  listeners:
+    web:
+      port: 8000
+      protocol: HTTP
+      namespacePolicy:
+        from: All
+
+# Port configuration
+ports:
+  web:
+    port: 8000
+    hostPort: 8080
+    exposedPort: 80
+
+# Service
+service:
+  enabled: true
+  type: ClusterIP
+
+# Pin to control-plane node (needed for kind's extraPortMappings)
+nodeSelector:
+  node-role.kubernetes.io/control-plane: ""
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule

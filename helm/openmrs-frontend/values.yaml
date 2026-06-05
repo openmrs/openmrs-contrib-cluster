@@ -2,9 +2,6 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-global:
-  defaultIngressClass: "nginx"
-
 enabled: true
 
 replicaCount: 2
@@ -46,8 +43,15 @@ service:
   type: ClusterIP
   port: 80
 
-ingress:
+gateway:
   enabled: true
+  path: /openmrs/spa
+  parentRefs:
+    name: traefik-gateway
+    namespace: kube-system
+
+ingress:
+  enabled: false
   className: "nginx"
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"

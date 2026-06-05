@@ -1,0 +1,35 @@
+gatewayClassName: traefik
+
+traefik:
+  providers:
+    kubernetesIngress:
+      enabled: false
+    kubernetesCRD:
+      enabled: true
+    kubernetesGateway:
+      enabled: true
+
+  gateway:
+    enabled: false
+
+  ports:
+    web:
+      port: 8000
+      expose:
+        default: true
+      exposedPort: 80
+      protocol: TCP
+    websecure:
+      port: 8443
+      expose:
+        default: true
+      exposedPort: 443
+      protocol: TCP
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi

@@ -1,0 +1,20 @@
+{{- if or .Values.traefikService.enabled (gt (int .Values.replicaCount) 1) }}
+apiVersion: traefik.io/v1alpha1
+kind: TraefikService
+metadata:
+  name: {{ include "openmrs-backend.fullname" . }}-sticky
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs-backend.labels" . | nindent 4 }}
+spec:
+  weighted:
+    services:
+      - name: {{ include "openmrs-backend.fullname" . }}
+        port: {{ .Values.service.port | default 8080 }}
+        weight: 1
+        sticky:
+          cookie:
+            name: openmrs_session
+            secure: {{ .Values.traefikService.sticky.cookie.secure | default false }}
+            httpOnly: true
+{{- end }}

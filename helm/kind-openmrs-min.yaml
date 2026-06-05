@@ -1,6 +1,10 @@
 global:
   defaultStorageClass: standard
-  defaultIngressClass: nginx
+traefik-gateway:
+  traefik:
+    ports:
+      web:
+        hostPort: 80
 mariadb:
   auth:
     rootPassword: Root123
@@ -8,6 +12,3 @@ mariadb:
     database: openmrs
     username: openmrs
     password: OpenMRS123
-
-
-
