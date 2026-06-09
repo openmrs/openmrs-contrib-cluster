@@ -35,70 +35,48 @@ Other install options:
 
 ## Quick Start (Kind for local testing)
 
-Make sure Docker is running, then:
-
-### 1. Create the Kind cluster
+Make sure Docker is running, then one command bootstraps everything:
 
       cd helm
-      kind create cluster --config=kind-config.yaml
+      make deploy
 
-The `kind-config.yaml` maps port **80** from your host to the control-plane node
-(needed so Traefik can receive traffic at `localhost:80`).
+This handles all of the following in order (idempotent — safe to re-run):
 
-### 2. Install cluster prerequisites
+| Step | What it does |
+|------|-------------|
+| 1a   | Preflight checks — verifies `kind`, `kubectl`, `helm`, Docker |
+| 1b   | Pre-pulls images + Helm dependencies in parallel |
+| 2    | Creates Kind cluster (`kind-config.yaml`) + loads images |
+| 3    | Installs `openmrs-operator` chart — bundles Gateway API CRDs, MariaDB operator, ECK operator, Traefik, and local-path-provisioner |
+| 4    | Deploys OpenMRS umbrella chart (live pod status every 10s) |
+| 5    | Prints pod summaries and access URL |
 
-      # Set kubectl context to your local kind cluster
-      kubectl cluster-info --context kind-kind
+Once deployment completes, OpenMRS is available at:
 
-      # Local path provisioner (provides PersistentVolumes for MariaDB, ES, etc.)
-      kubectl apply -f kind-init.yaml
+      http://localhost:8080/openmrs/spa/login
 
-      # Gateway API CRDs (experimental channel — required for URLRewrite filters)
-      kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.5.1/experimental-install.yaml
+No port-forwarding needed — Traefik binds the port directly.
 
-      # MariaDB operator (required when openmrs-backend.mariadb.enabled=true)
-      helm repo add mariadb-operator https://helm.mariadb.com
-      helm repo update
-      helm install mariadb-operator-crds mariadb-operator/mariadb-operator-crds
-      helm install mariadb-operator mariadb-operator/mariadb-operator \
-        -n mariadb-system --create-namespace
+### Make targets
 
-      # ECK operator (required when openmrs-backend.elasticsearch.enabled=true)
-      helm repo add elastic https://helm.elastic.co
-      helm repo update
-      helm install elastic-operator elastic/eck-operator \
-        -n elastic-system --create-namespace
+| Command | Description |
+|---------|-------------|
+| `make deploy` | Full bootstrap (idempotent) |
+| `make deploy-operators` | Prerequisites only — stops before OpenMRS |
+| `make deploy-openmrs` | OpenMRS only (assumes operators are running) |
+| `make teardown` | Delete Kind cluster (prompts for confirmation) |
+| `make status` | Pod summary across all namespaces |
+| `make logs` | Stream openmrs-backend pod logs |
+| `make help` | Print all available targets |
 
-### 3. Deploy Traefik (edge router)
+### Environment variables
 
-Traefik is installed **standalone** (not as a subchart of OpenMRS).
-It uses the Gateway API to route traffic to the OpenMRS services.
-
-      helm repo add traefik https://traefik.github.io/charts
-      helm install traefik traefik/traefik -n kube-system \
-        --values kind-traefik.yaml
-
-This configures:
-- `hostPort: 80` on the control-plane node → accessible at `localhost:80`
-- Gateway listener accepting routes from **all** namespaces
-- The `traefik` GatewayClass for the Gateway API
-
-### 4. Deploy OpenMRS
-
-      helm dependency update ./openmrs
-      helm upgrade --install --create-namespace -n openmrs \
-        --values kind-openmrs.yaml openmrs ./openmrs
-
-### 5. Access the application
-
-Edge routing uses the Kubernetes Gateway API with Traefik.
-Once all pods are ready (`kubectl wait --for=condition=ready pod -n openmrs --all --timeout=600s`),
-OpenMRS is available directly at:
-
-      http://localhost/openmrs/
-      http://localhost/openmrs/spa/home
-
-No port-forwarding needed — Traefik binds port 80 directly.
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MONITORING=true` | `false` | Enable Grafana/Loki/Alloy monitoring stack |
+| `CLUSTER_NAME` | `kind` | Kind cluster name |
+| `SKIP_OPERATORS=true` | `false` | Skip `openmrs-operator` chart install |
+| `SKIP_OPENMRS=true` | `false` | Skip OpenMRS deployment (exit after step 3) |
 
 ### Alternative: install from Helm registry
 
@@ -318,6 +296,18 @@ This will:
 ## Directory Structure
 ```
 helm                              # helm charts
+├── Makefile                      # one-command local bootstrap (make deploy)
+├── scripts                       # bootstrap helpers (lib.sh, bootstrap.sh, teardown.sh)
+├── openmrs                       # umbrella chart
+├── openmrs-backend               # backend subchart
+├── openmrs-frontend              # frontend subchart
+├── traefik-gateway               # Traefik Gateway API subchart
+├── openmrs-operator              # Cluster operators chart (MariaDB, ECK, Traefik, Gateway API)
+├── kind-config.yaml              # Kind cluster definition
+├── kind-init.yaml                # Cluster prerequisites
+├── kind-openmrs.yaml             # OpenMRS values (local dev)
+├── kind-openmrs-min.yaml         # OpenMRS values (minimal)
+├── kind-traefik.yaml             # Traefik values (local dev)
 terraform-backend                 # terraform AWS backend setup
 terraform                         # terraform AWS setup
 ├── ...

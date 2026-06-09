@@ -1,16 +1,4 @@
-Congratulations! OpenMRS has been successfully deployed!
+OpenMRS is ready!
 
-It may take a few minutes for the OpenMRS application to be accessible. You can watch the status by running
-and waiting for all pods to be ready:
-
-kubectl get pods -n {{ .Release.Namespace }}
-
-To access the service via Traefik Gateway API, install traefik-gateway in kube-system first, then port-forward:
-   kubectl -n kube-system port-forward svc/traefik-gateway-traefik 8080:80
-
-NOTE: In case port-forward command does not work, list Traefik services in kube-system:
-        kubectl -n kube-system get svc -l app.kubernetes.io/name=traefik
-
-OpenMRS will be available at:
   http://localhost:8080/openmrs/
   http://localhost:8080/openmrs/spa/home

@@ -1,0 +1,27 @@
+apiVersion: v2
+name: openmrs-operator
+description: Cluster-level operators and infrastructure for OpenMRS (MariaDB operator, ECK operator, Traefik, Gateway API)
+type: application
+version: 1.0.0
+appVersion: "1.0"
+
+dependencies:
+  - name: mariadb-operator-crds
+    repository: https://helm.mariadb.com/mariadb-operator
+    version: "0.35.0"
+    condition: mariadb-operator-crds.enabled
+
+  - name: mariadb-operator
+    repository: https://helm.mariadb.com/mariadb-operator
+    version: "0.35.0"
+    condition: mariadb-operator.enabled
+
+  - name: eck-operator
+    repository: https://helm.elastic.co
+    version: "2.16.0"
+    condition: eck-operator.enabled
+
+  - name: traefik
+    repository: https://traefik.github.io/charts
+    version: "34.0.0"
+    condition: traefik.enabled

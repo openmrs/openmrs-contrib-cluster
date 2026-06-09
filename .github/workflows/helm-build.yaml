@@ -23,6 +23,9 @@ jobs:
       - name: Add Helm Repositories
         run: |
           helm repo add grafana https://grafana.github.io/helm-charts
+          helm repo add mariadb-operator https://helm.mariadb.com
+          helm repo add elastic https://helm.elastic.co
+          helm repo add traefik https://traefik.github.io/charts
 
       - name: Lint Subcharts
         run: |
@@ -30,10 +33,16 @@ jobs:
           helm lint helm/openmrs-frontend
 
       - name: Update Dependencies
-        run: helm dependency update helm/openmrs
+        run: |
+          helm dependency update helm/openmrs
+          helm dependency update helm/openmrs-operator
 
-      - name: Lint Main Chart
-        run: helm lint helm/openmrs
+      - name: Lint Charts
+        run: |
+          helm lint helm/openmrs
+          helm lint helm/openmrs-operator
 
       - name: Package Chart
-        run: helm package helm/openmrs
+        run: |
+          helm package helm/openmrs
+          helm package helm/openmrs-operator

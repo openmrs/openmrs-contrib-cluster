@@ -167,7 +167,7 @@ gateway:
   path: /openmrs/
   parentRefs:
     name: traefik-gateway
-    namespace: kube-system
+    namespace: openmrs-system
 
 traefikService:
   enabled: false
