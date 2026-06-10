@@ -31,7 +31,7 @@ jobs:
       - name: Add Helm Repositories
         run: |
           helm repo add grafana https://grafana.github.io/helm-charts
-          helm repo add mariadb-operator https://helm.mariadb.com
+          helm repo add mariadb-operator https://helm.mariadb.com/mariadb-operator
           helm repo add elastic https://helm.elastic.co
           helm repo add traefik https://traefik.github.io/charts
 
