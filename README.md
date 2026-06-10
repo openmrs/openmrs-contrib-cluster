@@ -35,6 +35,17 @@ Other install options:
 
 ## Quick Start (Kind for local testing)
 
+### Prerequisites
+
+| Tool | Install |
+|------|---------|
+| Docker | [docker.com](https://docs.docker.com/get-docker/) |
+| kind | `brew install kind` or [kind.sigs.k8s.io](https://kind.sigs.k8s.io/docs/user/quick-start/#installing-from-release-binaries) |
+| kubectl | `brew install kubectl` or [kubernetes.io](https://kubernetes.io/docs/tasks/tools/) |
+| helm | `brew install helm` or [helm.sh](https://helm.sh/docs/intro/install) |
+
+The bootstrap script runs preflight checks and will fail with a clear message if any are missing.
+
 Make sure Docker is running, then one command bootstraps everything:
 
       cd helm

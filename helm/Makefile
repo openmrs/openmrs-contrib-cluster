@@ -1,13 +1,3 @@
-# openmrs-contrib-cluster — local Kind bootstrap
-# ─────────────────────────────────────────────
-# make deploy            Full bootstrap (idempotent — safe to re-run)
-# make deploy-operators  Prerequisites only (Kind + openmrs-operator chart)
-# make deploy-openmrs    OpenMRS chart only (operators must already be running)
-# make teardown          Delete cluster (prompts for confirmation)
-# make status            Pod summary across all namespaces
-# make logs              Stream openmrs-backend logs
-# make help              This message
-
 SHELL        := /bin/bash
 SCRIPTS      := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))scripts
 
