@@ -31,8 +31,13 @@ spec:
     default_storage_engine=InnoDB
     binlog_format=ROW
     innodb_autoinc_lock_mode=2
+    innodb_lock_wait_timeout=120
+    innodb_print_all_deadlocks=ON
+    max_allowed_packet=64M
     max_connections=200
     max_user_connections=200
+    wait_timeout=28800
+    interactive_timeout=28800
     character_set_server=utf8mb4
     collation_server=utf8mb4_general_ci
 
