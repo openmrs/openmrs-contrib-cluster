@@ -1,16 +1,12 @@
-# ── MariaDB operator CRDs ─────────────────────────────────────────────────
 mariadb-operator-crds:
   enabled: true
 
-# ── MariaDB operator ──────────────────────────────────────────────────────
 mariadb-operator:
   enabled: true
 
-# ── ECK operator (Elasticsearch) ──────────────────────────────────────────
 eck-operator:
   enabled: true
 
-# ── Traefik (edge router) ─────────────────────────────────────────────────
 traefik:
   enabled: true
 
