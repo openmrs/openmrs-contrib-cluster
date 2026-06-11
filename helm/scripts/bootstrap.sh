@@ -20,18 +20,17 @@ KNOWN_IMAGES=(
   "openmrs/openmrs-contrib-elasticsearch:8.15.3"
 )
 
-# ─────────────────────────────────────────────────────────────────────────
 step "Preflight checks"
-# ─────────────────────────────────────────────────────────────────────────
+
 require_tools kind kubectl helm docker
 require_docker
 info "kind:    $(kind version 2>/dev/null | head -1)"
 info "kubectl: $(kubectl version --client --short 2>/dev/null || kubectl version --client 2>/dev/null || echo 'unknown')"
 info "helm:    $(helm version --short 2>/dev/null || echo 'unknown')"
+end_step
 
-# ─────────────────────────────────────────────────────────────────────────
 step "Pre-pulling images (parallel)"
-# ─────────────────────────────────────────────────────────────────────────
+
 pull_pids=()
 for img in "${KNOWN_IMAGES[@]}"; do
   (docker pull --platform linux/amd64 "$img" 2>&1 | sed 's/^/  /') &
@@ -45,9 +44,7 @@ helm dependency update "$HELM_DIR/openmrs-backend" >/tmp/backend-dep-update.log 
   cat /tmp/backend-dep-update.log
 }
 
-# Parent charts can run in parallel
-helm dependency update "$HELM_DIR/openmrs" >/tmp/openmrs-dep-update.log 2>&1 &
-dep_pid=$!
+# openmrs-operator dependencies (external, not affected by local template edits)
 helm dependency update "$HELM_DIR/openmrs-operator" >/tmp/operator-dep-update.log 2>&1 &
 operator_dep_pid=$!
 
@@ -74,10 +71,6 @@ fi
 kubectl cluster-info --context "kind-${CLUSTER_NAME}" 2>/dev/null \
   || die "Cannot reach API server for context kind-${CLUSTER_NAME}."
 
-wait "$dep_pid" 2>/dev/null || {
-  warn "openmrs dep update had issues:"
-  cat /tmp/openmrs-dep-update.log
-}
 wait "$operator_dep_pid" 2>/dev/null || {
   warn "openmrs-operator dep update had issues:"
   cat /tmp/operator-dep-update.log
@@ -158,6 +151,13 @@ if [[ "$SKIP_OPENMRS" == "true" ]]; then
 fi
 
 ensure_namespace "$OPENMRS_NS"
+
+# Rebuild dependency archives right before deploy to reflect current templates
+helm dependency update "$HELM_DIR/openmrs" >/tmp/openmrs-dep-update.log 2>&1 || {
+  warn "openmrs dep update had issues:"
+  cat /tmp/openmrs-dep-update.log
+}
+
 info "Deploying OpenMRS (this takes several minutes on first run)..."
 echo ""
 

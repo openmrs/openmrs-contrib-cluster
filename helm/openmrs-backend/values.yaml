@@ -29,7 +29,7 @@ db:
 mariadb:
   image:
     repository: mariadb
-    tag: "10.11@sha256:5a5c675881ef3fd1c1da9b0a3bfd6ee82edbe39cd9e32e06be18034c37235e0e"
+    tag: "10.11"
   auth:
     rootPassword: Root123
     database: openmrs
