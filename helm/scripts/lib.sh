@@ -13,8 +13,46 @@ info()    { echo -e "${BLUE}[INFO]${RESET}  $*"; }
 success() { echo -e "${GREEN}[ OK ]${RESET}  $*"; }
 warn()    { echo -e "${YELLOW}[WARN]${RESET}  $*"; }
 error()   { echo -e "${RED}[ERR ]${RESET}  $*" >&2; }
-step()    { echo -e "\n${BOLD}━━━  $*  ━━━${RESET}"; }
 die()     { error "$*"; exit 1; }
+
+# ── Spinner ─────────────────────────────────────────────────────────────────
+_STEP_PID=""
+_STEP_ACTIVE=false
+
+_cleanup_spinner() {
+  if [[ "$_STEP_ACTIVE" == true ]]; then
+    [[ -n "$_STEP_PID" ]] && kill "$_STEP_PID" 2>/dev/null || true
+    _STEP_PID=""
+    _STEP_ACTIVE=false
+  fi
+}
+trap _cleanup_spinner EXIT
+
+_spinner() {
+  local chars="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+  local i=0
+  while true; do
+    printf "\r${GREEN}  %s${RESET} Working..." "${chars:$i:1}"
+    i=$(( (i + 1) % ${#chars} ))
+    sleep 0.1
+  done
+}
+
+step() {
+  echo -e "\n${BOLD}━━━  $*  ━━━${RESET}"
+  _STEP_ACTIVE=true
+  _spinner &
+  _STEP_PID=$!
+}
+
+end_step() {
+  [[ "$_STEP_ACTIVE" == false ]] && return
+  _STEP_ACTIVE=false
+  [[ -n "$_STEP_PID" ]] && kill "$_STEP_PID" 2>/dev/null || true
+  wait "$_STEP_PID" 2>/dev/null || true
+  _STEP_PID=""
+  printf "\r${GREEN}  ✓${RESET} Done\n"
+}
 
 require_tools() {
   local missing=()

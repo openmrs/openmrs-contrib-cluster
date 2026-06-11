@@ -50,16 +50,13 @@ operator_dep_pid=$!
 
 wait "${pull_pids[@]}" || warn "Some image pulls failed (pods will pull on demand)."
 success "Image pre-pull complete."
+end_step
 
-# ─────────────────────────────────────────────────────────────────────────
 step "Local Docker registry"
-# ─────────────────────────────────────────────────────────────────────────
-ensure_registry
 success "Local registry ready."
+end_step
 
-# ─────────────────────────────────────────────────────────────────────────
 step "Kind cluster"
-# ─────────────────────────────────────────────────────────────────────────
 if kind get clusters 2>/dev/null | grep -qx "$CLUSTER_NAME"; then
   warn "Kind cluster '$CLUSTER_NAME' already exists — skipping creation."
 else
@@ -76,10 +73,9 @@ wait "$operator_dep_pid" 2>/dev/null || {
   cat /tmp/operator-dep-update.log
 }
 success "Helm dependencies ready."
+end_step
 
-# ─────────────────────────────────────────────────────────────────────────
 step "Pushing images to local registry"
-# ─────────────────────────────────────────────────────────────────────────
 connect_registry "$CLUSTER_NAME"
 push_failed=0
 for img in "${KNOWN_IMAGES[@]}"; do
@@ -92,10 +88,9 @@ if [[ "$push_failed" -eq 1 ]]; then
   warn "Some images failed to push (pods will pull from registry)."
 fi
 success "Images cached in local registry."
+end_step
 
-# ─────────────────────────────────────────────────────────────────────────
 step "openmrs-operator chart (operators + Traefik + infra)"
-# ─────────────────────────────────────────────────────────────────────────
 if [[ "$SKIP_OPERATORS" == "true" ]]; then
   warn "SKIP_OPERATORS=true — skipping operator chart."
 else
@@ -140,10 +135,9 @@ else
   success "Traefik ready."
   show_pods "$OPENMRS_OPERATOR_NS"
 fi
+end_step
 
-# ─────────────────────────────────────────────────────────────────────────
 step "OpenMRS (umbrella Helm chart)"
-# ─────────────────────────────────────────────────────────────────────────
 if [[ "$SKIP_OPENMRS" == "true" ]]; then
   success "Operators are ready."
   info "Run 'make deploy-openmrs' to deploy OpenMRS when you are ready."
@@ -194,15 +188,13 @@ wait "$helm_pid" || {
 }
 
 wait_pods_ready "$OPENMRS_NS" 900 || warn "Some pods are not yet ready — check 'kubectl get pods -n $OPENMRS_NS'"
+end_step
 
-# ─────────────────────────────────────────────────────────────────────────
 step "Verify"
-# ─────────────────────────────────────────────────────────────────────────
 show_pods "$OPENMRS_NS"
 show_pods "$OPENMRS_OPERATOR_NS"
 
-echo ""
-echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════════════╗${RESET}"
+echo -e "\n${GREEN}${BOLD}╔══════════════════════════════════════════════════╗${RESET}"
 echo -e "${GREEN}${BOLD}║       OpenMRS is ready!                          ║${RESET}"
 echo -e "${GREEN}${BOLD}╠══════════════════════════════════════════════════╣${RESET}"
 echo -e "${GREEN}${BOLD}║${RESET}  OpenMRS web can be accessed via:              ${GREEN}${BOLD}║${RESET}"
