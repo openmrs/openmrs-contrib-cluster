@@ -23,11 +23,18 @@ jobs:
       - name: Add Helm Repositories
         run: |
           helm repo add grafana https://grafana.github.io/helm-charts
+          helm repo add elastic https://helm.elastic.co
+          helm repo update
 
       - name: Lint Subcharts
         run: |
           helm lint helm/openmrs-backend
           helm lint helm/openmrs-frontend
+
+      - name: Update Subchart Dependencies
+        run: |
+          helm dependency update helm/openmrs-backend
+          helm dependency update helm/openmrs-frontend
 
       - name: Update Dependencies
         run: helm dependency update helm/openmrs
@@ -37,3 +44,18 @@ jobs:
 
       - name: Package Chart
         run: helm package helm/openmrs
+
+      - name: Validate Rendering (default values)
+        run: helm template helm/openmrs --generate-name
+
+      - name: Validate Rendering (full-featured)
+        run: |
+          helm template helm/openmrs --generate-name \
+            --values helm/kind-openmrs.yaml
+
+      - name: Validate Rendering (minimal, no optional features)
+        run: |
+          helm template helm/openmrs --generate-name \
+            --set openmrs-backend.monitoring.enabled=false \
+            --set openmrs-backend.elasticsearch.enabled=false \
+            --set openmrs-backend.minio.enabled=false
