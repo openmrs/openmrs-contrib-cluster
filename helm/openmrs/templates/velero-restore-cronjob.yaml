@@ -1,4 +1,4 @@
-{{- if .Values.backup.enabled }}
+{{- if and .Values.backup.enabled .Values.backup.restore.enabled }}
 # ClusterRole — gives the restore checker permission to read pods and manage restores
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -110,5 +110,4 @@ spec:
                   EOF
 
                   echo "Restore submitted successfully."
-                  fi
 {{- end }}

@@ -9,8 +9,8 @@ metadata:
     {{- include "openmrs.labels" . | nindent 4 }}
 type: Opaque
 stringData:
-  AWS_ACCESS_KEY_ID: {{ .Values.backup.mariadbBackup.credentials.accessKey | quote }}
-  AWS_SECRET_ACCESS_KEY: {{ .Values.backup.mariadbBackup.credentials.secretKey | quote }}
+  AWS_ACCESS_KEY_ID: {{ required "backup.mariadbBackup.credentials.accessKey is required when backup.mariadbBackup.enabled=true" .Values.backup.mariadbBackup.credentials.accessKey | quote }}
+  AWS_SECRET_ACCESS_KEY: {{ required "backup.mariadbBackup.credentials.secretKey is required when backup.mariadbBackup.enabled=true" .Values.backup.mariadbBackup.credentials.secretKey | quote }}
 ---
 # CronJob — dumps MariaDB directly to S3, independent of Velero
 # Using two containers with a shared volume:
@@ -48,10 +48,9 @@ spec:
                 - -c
                 - |
                   echo "Starting MariaDB dump..."
-                  mysqldump \
-                    -h {{ .Release.Name }}-mariadb-primary \
+                  MYSQL_PWD="${MARIADB_ROOT_PASSWORD}" mysqldump \
+                    -h {{ default (printf "%s-mariadb-primary" .Release.Name) .Values.backup.mariadbBackup.mariadbHost }} \
                     -u root \
-                    -p${MARIADB_ROOT_PASSWORD} \
                     --all-databases \
                     --single-transaction \
                     > /dump/backup.sql
@@ -71,10 +70,10 @@ spec:
                 - |
                   echo "Uploading dump to S3..."
                   aws s3 cp /dump/backup.sql \
-                    s3://{{ .Values.backup.mariadbBackup.bucket }}/mariadb-backup-$(date +%Y%m%d%H%M).sql \
+                    s3://{{ required "backup.mariadbBackup.bucket is required when backup.mariadbBackup.enabled=true" .Values.backup.mariadbBackup.bucket }}/mariadb-backup-$(date +%Y%m%d%H%M).sql \
                     --region {{ .Values.backup.mariadbBackup.region }} \
-                    {{- if .Values.backup.mariadbBackup.s3ForcePathStyle }}
-                    --no-sign-request \
+                    {{- if .Values.backup.mariadbBackup.s3Endpoint }}
+                    --endpoint-url {{ .Values.backup.mariadbBackup.s3Endpoint }} \
                     {{- end }}
                   echo "Upload complete."
               volumeMounts:

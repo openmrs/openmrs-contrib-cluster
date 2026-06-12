@@ -70,6 +70,10 @@ backup:
 
   # Restore settings.
   restore:
+    # Set to true to enable the scheduled restore CronJob.
+    # Disabled by default — restoring data should be an admin-triggered action.
+    enabled: false
+
     # Schedule for the daily restore job.
     # Runs after the backup, e.g. if backup is at 02:00 restore runs at 03:00.
     schedule: "0 3 * * *"
@@ -85,6 +89,16 @@ backup:
     bucket: ""
     region: "us-east-1"
     s3ForcePathStyle: false
+
+    # S3-compatible endpoint URL. Only needed for MinIO or other non-AWS endpoints.
+    # Example: "http://minio.minio-namespace.svc.cluster.local:9000"
+    s3Endpoint: ""
+
+    # MariaDB primary host. Defaults to {{ .Release.Name }}-mariadb-primary
+    # if left empty. Override this if you use nameOverride on the MariaDB sub-chart.
+    mariadbHost: ""
+
     credentials:
       accessKey: ""
       secretKey: ""
+

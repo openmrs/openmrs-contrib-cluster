@@ -12,8 +12,8 @@ type: Opaque
 stringData:
   cloud: |
     [default]
-    aws_access_key_id={{ .Values.backup.credentials.accessKey }}
-    aws_secret_access_key={{ .Values.backup.credentials.secretKey }}
+    aws_access_key_id={{ required "backup.credentials.accessKey is required when backup.enabled=true" .Values.backup.credentials.accessKey }}
+    aws_secret_access_key={{ required "backup.credentials.secretKey is required when backup.enabled=true" .Values.backup.credentials.secretKey }}
 ---
 # Velero BackupStorageLocation — tells Velero where to store backups 
 apiVersion: velero.io/v1
@@ -26,7 +26,7 @@ metadata:
 spec:
   provider: aws
   objectStorage:
-    bucket: {{ .Values.backup.bucket }}
+    bucket: {{ required "backup.bucket is required when backup.enabled=true" .Values.backup.bucket }}
   config:
     region: {{ .Values.backup.region }}
     s3ForcePathStyle: {{ .Values.backup.s3ForcePathStyle | quote }}
@@ -66,6 +66,10 @@ spec:
                   - /bin/sh
                   - -c
                   - >
+                    curl -s -X PUT "localhost:9200/_snapshot/velero"
+                    -H "Content-Type: application/json"
+                    -d '{"type":"fs","settings":{"location":"/usr/share/elasticsearch/data/snapshots"}}'
+                    &&
                     curl -s -X PUT
                     "localhost:9200/_snapshot/velero/snapshot_$(date +%Y%m%d%H%M)?wait_for_completion=true"
                 onError: Fail
