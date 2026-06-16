@@ -84,26 +84,6 @@ Full internal cluster URL for the ECK-managed Elasticsearch HTTP service.
     $port | quote -}}
 {{- end }}
 
-{{/*
-Get the service name of minio created by bitmani elastic helm chart
-*/}}
-{{- define "minio.serviceName" -}}
-{{- $name := "minio" -}}
-{{- $releaseName := regexReplaceAll "(-?[^a-z\\d\\-])+-?" (lower .Release.Name) "-" -}}
-{{- if contains $name $releaseName -}}
-{{- $releaseName | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s-%s" $releaseName $name | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-{{- end }}
-
-{{/*
-Create the url for the minio
-*/}}
-{{- define "openmrs-minio.url" -}}
-{{- $releaseNameSpace := .Release.Namespace -}}
-{{- $clusterDomain := "svc.cluster.local" }}
-{{- $port := default "9000" (.Values.minio.containerPorts.api | toString) }}
-{{- $fullurl := printf "%s%s.%s.%s:%s" "http://" (include "minio.serviceName" .) $releaseNameSpace $clusterDomain $port }}
-{{- quote $fullurl }}
+{{- define "openmrs-seaweedfs.s3url" -}}
+{{- printf "http://%s-seaweedfs-s3.%s.svc.cluster.local:8333" .Release.Name .Release.Namespace }}
 {{- end }}

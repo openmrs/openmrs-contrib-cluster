@@ -91,38 +91,40 @@ elasticsearch-eck:
           requests:
             storage: 10Gi
 
-minio:
-  enabled: false
-  image:
-    repository: bitnamilegacy/minio
-    tag: 2025.7.23
-  clientImage:
-    repository: bitnamilegacy/minio-client
-  defaultInitContainers:
-    volumePermissions:
-      image:
-        repository: bitnamilegacy/os-shell
-  containerPorts:
-    api: 9000
-    console: 9001
-  console:
-    image:
-      repository: bitnamilegacy/minio-object-browser
-  mode: distributed
-  auth:
-    rootPassword: Root1234
-  statefulset:
-    replicaCount: 4
-    zones: 1
-    drivesPerNode: 1
-  provisioning:
+seaweedfs:
+  master:
+    replicas: 3
+  volume:
     enabled: true
-    buckets:
-      - name: openmrs
-    users:
-      - username: openmrs
-        password: OpenMRS123
-        policies: ["readwrite"]
+    replicas: 3
+    dataDirs:
+      - name: data
+        type: "persistentVolumeClaim"
+        storageClass: "standard"
+        size: "8Gi"
+        maxVolumes: 0
+  filer:
+    enabled: true
+    replicas: 3
+    extraEnvironmentVars:
+      WEED_MYSQL_ENABLED: "true"
+      WEED_MYSQL_HOSTNAME: "{{ .Release.Name }}-mariadb"
+      WEED_MYSQL_DATABASE: "openmrs"
+      WEED_MYSQL_USERNAME: "openmrs"
+      WEED_LEVELDB2_ENABLED: "false"
+    secretExtraEnvironmentVars:
+      WEED_MYSQL_PASSWORD:
+        secretKeyRef:
+          name: "openmrs-backend-mariadb-secret"
+          key: user-password
+  s3:
+    enabled: true
+    replicas: 2
+    enableAuth: true
+    credentials:
+      admin:
+        accessKey: "openmrs"
+        secretKey: "OpenMRS123"
 
 imagePullSecrets: []
 

@@ -39,10 +39,10 @@ data:
   OMRS_SEARCH_ES_URIS: {{ .Values.elasticsearch.uris | quote }}
   OMRS_EXTRA_HIBERNATE_SEARCH_BACKEND_SSL_VERIFICATION__MODE: "none"
   {{- end }}
-  {{- if .Values.minio.enabled }}
+  {{- if .Values.seaweedfs.enabled }}
   storage.type: "s3"
-  storage.s3.region: "us-east-1"
-  storage.s3.endpoint: {{ include "openmrs-minio.url" . }}
+  storage.s3.region: "us-east-2"
+  storage.s3.endpoint: {{ include "openmrs-seaweedfs.s3url" . }}
   storage.s3.forcePathStyle: "true"
   {{- end }}
   {{- if .Values.infinispan.clustered }}
