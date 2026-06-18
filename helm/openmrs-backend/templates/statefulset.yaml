@@ -45,38 +45,6 @@ spec:
         {{- end }}
 
       initContainers:
-      {{- if .Values.mariadb.enabled }}
-        - name: wait-for-mariadb
-          image: mariadb:11.4
-          envFrom:
-            - configMapRef:
-                name: {{ include "openmrs-backend.fullname" . }}
-            - secretRef:
-                name: {{ include "openmrs-backend.fullname" . }}
-          command:
-            - /bin/bash
-            - -c
-            - |
-              echo "Waiting for MariaDB to accept connections with application credentials..."
-              MAX_RETRIES=120
-              RETRY_INTERVAL=5
-              i=0
-              until mariadb \
-                -h {{ .Release.Name }}-mariadb.{{ .Release.Namespace }}.svc.cluster.local \
-                -u "$OMRS_DB_USERNAME" \
-                -p"$OMRS_DB_PASSWORD" \
-                --ssl=0 \
-                -e "SELECT 1;" 2>/dev/null; do
-                i=$((i + 1))
-                if [ $i -ge $MAX_RETRIES ]; then
-                  echo "Timeout waiting for MariaDB after $((MAX_RETRIES * RETRY_INTERVAL)) seconds."
-                  exit 1
-                fi
-                echo "  MariaDB not ready yet (attempt $i/$MAX_RETRIES) — retrying in ${RETRY_INTERVAL}s..."
-                sleep $RETRY_INTERVAL
-              done
-              echo "MariaDB is ready and application credentials are valid."
-      {{- end }}
       {{- if .Values.elasticsearch.enabled }}
         - name: import-es-ca
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
