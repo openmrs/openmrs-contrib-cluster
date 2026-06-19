@@ -54,15 +54,46 @@ openmrs-backend:
                     memory: "2Gi"
                     ephemeral-storage: 10Gi
 
-  minio:
+  seaweedfs:
     enabled: true
-    auth:
-      rootPassword: Root1234
-    provisioning:
-      users:
-        - username: openmrs
-          password: OpenMRS123
-          policies: ["readwrite"]
+    global:
+      seaweedfs:
+        enableSecurity: false
+    master:
+      replicas: 3
+    volume:
+      enabled: true
+      replicas: 3
+      dataDirs:
+        - name: data
+          type: "persistentVolumeClaim"
+          storageClass: "standard"
+          size: "8Gi"
+          maxVolumes: 0
+    filer:
+      enabled: true
+      replicas: 3
+      extraEnvironmentVars:
+        WEED_MYSQL_ENABLED: "true"
+        WEED_MYSQL_HOSTNAME: "{{ .Release.Name }}-mariadb"
+        WEED_MYSQL_DATABASE: "openmrs"
+        WEED_MYSQL_USERNAME: "openmrs"
+        WEED_LEVELDB2_ENABLED: "false"
+      secretExtraEnvironmentVars:
+        WEED_MYSQL_PASSWORD:
+          secretKeyRef:
+            name: "openmrs-backend-mariadb-secret"
+            key: user-password
+    s3:
+      enabled: true
+      replicas: 2
+      enableAuth: true
+      credentials:
+        admin:
+          accessKey: "openmrs"
+          secretKey: "OpenMRS123"
+      createBuckets:
+        - name: openmrs
 openmrs-frontend:
   gateway:
     enabled: true
