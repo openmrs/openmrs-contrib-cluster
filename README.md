@@ -172,6 +172,15 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `tr
 | `openmrs-backend.grafana.adminPassword`                          | Grafana admin password                                                                                                 | `"Admin123"`                                              |
 | `openmrs-backend.grafana.ingress.enabled`                        | Enable ingress for Grafana                                                                                             | `"true"`                                                  |
 | `openmrs-backend.grafana.ingress.hosts`                          | Hosts for Grafana ingress                                                                                              | `["grafana.local"]`                                       |
+| `openmrs-backend.seaweedfs.enabled`                        | Deploy SeaweedFS S3-compatible object storage (replaces MinIO)                                                    | `"false"`                                                 |
+| `openmrs-backend.seaweedfs.master.replicas`                | Number of SeaweedFS master nodes for Raft consensus                                                               | `3`                                                       |
+| `openmrs-backend.seaweedfs.volume.replicas`                | Number of SeaweedFS volume servers (data storage pods); one per worker node recommended                           | `3`                                                       |
+| `openmrs-backend.seaweedfs.volume.dataDirs[0].size`        | Persistent volume size per volume server pod                                                                      | `"8Gi"`                                                   |
+| `openmrs-backend.seaweedfs.filer.replicas`                 | Number of SeaweedFS filer replicas for metadata store (3+ recommended for HA)                                     | `3`                                                       |
+| `openmrs-backend.seaweedfs.s3.replicas`                    | Number of S3 API gateway replicas (stateless)                                                                     | `2`                                                       |
+| `openmrs-backend.seaweedfs.s3.enableAuth`                  | Enable S3 credential authentication                                                                               | `"true"`                                                  |
+| `openmrs-backend.seaweedfs.s3.credentials.admin.accessKey` | S3 access key (must match backend's `storage.s3.accessKeyId`)                                                     | `"openmrs"`                                               |
+| `openmrs-backend.seaweedfs.s3.credentials.admin.secretKey` | S3 secret key (must match backend's `storage.s3.secretAccessKey`)                                                 | `"OpenMRS123"`                                            |
 
 See [MariaDB Operator](https://github.com/mariadb-operator/mariadb-operator) for MariaDB CRD parameters.
 
@@ -181,6 +190,51 @@ before enabling Elasticsearch — see the Prerequisites section below.
 
 See [Grafana](https://github.com/grafana-community/helm-charts/blob/main/charts/grafana/README.md), [Loki](https://github.com/grafana/loki/blob/main/production/helm/loki/README.md) and [Alloy](https://github.com/grafana/alloy/blob/main/operations/helm/charts/alloy/README.md) helm charts for other Grafana parameters.
 
+#### Prerequisites: SeaweedFS (S3-compatible object storage)
+
+No separate operator installation is required. SeaweedFS is included as a
+Helm subchart dependency of `openmrs-backend`. When
+`openmrs-backend.seaweedfs.enabled=true`, the chart deploys:
+
+| Component | Pods | Purpose |
+|---|---|---|
+| Master | 3 | Raft-based cluster coordination |
+| Volume server | 3 | Persistent data storage with PVCs (one per worker node recommended) |
+| Filer | 3 | Metadata store required by the S3 gateway (uses MariaDB as backend for easy backup) |
+| S3 gateway | 2 | Stateless S3 API endpoint at `<release>-seaweedfs-s3:8333` (depends on filer) |
+
+Credentials are automatically configured via `s3.credentials.admin` values
+and injected into the backend's Secret as `storage.s3.accessKeyId` and
+`storage.s3.secretAccessKey`. See the backend parameters table above for
+configuration options.
+
+##### SeaweedFS Filer: MariaDB backend
+
+The filer uses MariaDB as its metadata store. The subchart's filer StatefulSet template
+hardcodes `WEED_MYSQL_USERNAME` and `WEED_MYSQL_PASSWORD` referencing the Secret
+`{release}-seaweedfs-db-secret` with keys `user` and `password` (both `optional: true`).
+The subchart creates this Secret automatically as a pre-install hook (with placeholder
+credentials). The chart overrides these via two mechanisms (env vars take precedence by
+appearing after the hardcoded entries):
+
+1. `filer.extraEnvironmentVars.WEED_MYSQL_USERNAME` — plain value (username is not sensitive)
+2. `filer.secretExtraEnvironmentVars.WEED_MYSQL_PASSWORD` — references the MariaDB
+   secret `{fullname}-mariadb-secret` key `user-password`, avoiding the password in
+   the StatefulSet YAML
+
+> The secret name in `secretExtraEnvironmentVars` is a hardcoded string because the
+> subchart does not process it through `tpl`. The default `{fullname}-mariadb-secret`
+> assumes `openmrs-backend` as the fullname. If you override `nameOverride` or
+> `fullnameOverride`, update this value to match.
+
+The chart also creates a pre-install hook Job that creates the `filemeta` table
+before the filer starts. This table is required by the filer's MariaDB store and
+the filer will crash with a fatal error if it is missing.
+
+The chart creates a pre-install hook Job that creates the `filemeta` table before the filer starts — the filer requires this table to exist and will crash with a fatal error if it is missing.
+
+See [SeaweedFS documentation](https://github.com/seaweedfs/seaweedfs/wiki)
+for full details.
 ### Terraform and AWS
 
 #### Setting up terraform and AWS

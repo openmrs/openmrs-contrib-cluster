@@ -1,0 +1,27 @@
+{{- if and .Values.seaweedfs.enabled .Values.seaweedfs.filer.enabled }}
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: SqlJob
+metadata:
+  name: {{ .Release.Name }}-seaweedfs-filemeta
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs-backend.labels" . | nindent 4 }}
+spec:
+  mariaDbRef:
+    name: {{ .Release.Name }}-mariadb
+  username: {{ .Values.mariadb.auth.username | default "openmrs" | quote }}
+  passwordSecretKeyRef:
+    name: {{ include "openmrs-backend.fullname" . }}-mariadb-secret
+    key: user-password
+  database: {{ .Values.mariadb.auth.database | default "openmrs" | quote }}
+  sql: |
+    CREATE TABLE IF NOT EXISTS `filemeta` (
+      `dirhash`   BIGINT NOT NULL,
+      `name`      VARCHAR(766) NOT NULL,
+      `directory` TEXT NOT NULL,
+      `meta`      LONGBLOB DEFAULT NULL,
+      PRIMARY KEY (`dirhash`, `name`)
+    ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+  backoffLimit: 5
+  restartPolicy: OnFailure
+{{- end }}
