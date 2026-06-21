@@ -25,11 +25,6 @@ appVersion: "nightly-core-2.8"
 
 dependencies:
 
-  - name: minio
-    version: 17.0.16
-    repository: oci://registry-1.docker.io/bitnamicharts
-    condition: minio.enabled
-
   - name: grafana
     version: 10.5.15
     repository: https://grafana.github.io/helm-charts
