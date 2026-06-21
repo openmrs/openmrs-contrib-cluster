@@ -58,4 +58,4 @@ jobs:
           helm template helm/openmrs --generate-name \
             --set openmrs-backend.monitoring.enabled=false \
             --set openmrs-backend.elasticsearch.enabled=false \
-            --set openmrs-backend.minio.enabled=false
+            --set openmrs-backend.seaweedfs.enabled=false

@@ -1,7 +1,7 @@
 dependencies:
-- name: minio
-  repository: oci://registry-1.docker.io/bitnamicharts
-  version: 17.0.16
+- name: seaweedfs
+  repository: https://seaweedfs.github.io/seaweedfs/helm
+  version: 4.31.0
 - name: grafana
   repository: https://grafana.github.io/helm-charts
   version: 10.5.15
@@ -14,5 +14,5 @@ dependencies:
 - name: eck-elasticsearch
   repository: https://helm.elastic.co
   version: 0.19.0
-digest: sha256:9e56f8f6f8ea6468c1257c2f9b46fbe84d88b48e6654ba27c2e41f1c139f0eaa
-generated: "2026-05-22T17:54:03.79884724+03:00"
+digest: sha256:eb529f8e3879371454e7ba754da65198e57486ac652429e45e98cdd31ddb7390
+generated: "2026-06-19T18:12:01.147571474+03:00"
