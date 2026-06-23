@@ -7,7 +7,7 @@ source "$SCRIPT_DIR/lib.sh"
 CLUSTER_NAME="${CLUSTER_NAME:-kind}"
 OPENMRS_OPERATOR_NS="${OPENMRS_OPERATOR_NS:-openmrs-system}"
 
-step "Teardown: openmrs local cluster"
+echo -e "\n${BOLD}━━━  Teardown: openmrs local cluster  ━━━${RESET}"
 warn "This will delete Kind cluster '${CLUSTER_NAME}' and ALL local data (PVCs, secrets)."
 read -r -p "  Continue? [y/N] " confirm
 [[ "$confirm" =~ ^[Yy]$ ]] || { echo -e "  ${BLUE}[INFO]${RESET}  Aborted."; exit 0; }
