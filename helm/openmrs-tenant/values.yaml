@@ -1,0 +1,149 @@
+tenant:
+  name: ""
+  hostname: ""
+
+global:
+  defaultStorageClass: "gp2"
+
+imagePullSecrets: []
+
+backend:
+  nameOverride: "backend"
+  fullnameOverride: ""
+
+  image:
+    repository: openmrs/openmrs-reference-application-3-backend
+    tag: ""
+    pullPolicy: IfNotPresent
+
+  replicaCount: 1
+
+  serviceAccount:
+    create: true
+    automount: true
+    annotations: {}
+    name: ""
+
+  service:
+    type: ClusterIP
+    port: 8080
+
+  persistence:
+    enabled: true
+    size: 8Gi
+    storageClass: ""
+
+  podSecurityContext:
+    fsGroup: 1001
+    runAsUser: 1001
+    fsGroupChangePolicy: "Always"
+
+  securityContext: {}
+
+  resources:
+    limits:
+      cpu: 4
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+
+  livenessProbe:
+    httpGet:
+      path: /openmrs/health/started
+      port: 8080
+    failureThreshold: 3
+    timeoutSeconds: 1
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /openmrs/health/started
+      port: 8080
+    initialDelaySeconds: 60
+    failureThreshold: 10
+    timeoutSeconds: 5
+    periodSeconds: 15
+  startupProbe:
+    httpGet:
+      path: /openmrs/health/started
+      port: 8080
+    initialDelaySeconds: 20
+    failureThreshold: 120
+    timeoutSeconds: 1
+    periodSeconds: 10
+
+  autoscaling:
+    enabled: false
+
+  db:
+    hostname: ""
+    port: 3306
+    database: ""
+    user: ""
+    password: ""
+    url: ""
+
+  infinispan:
+    clustered: false
+    bind_port: 7800
+
+  podAnnotations: {}
+  podLabels: {}
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+frontend:
+  nameOverride: "frontend"
+  fullnameOverride: ""
+
+  image:
+    repository: openmrs/openmrs-reference-application-3-frontend
+    tag: ""
+    pullPolicy: IfNotPresent
+
+  replicaCount: 1
+
+  serviceAccount:
+    create: false
+    automount: false
+    annotations: {}
+    name: ""
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  podSecurityContext: {}
+
+  securityContext: {}
+
+  resources: {}
+
+  livenessProbe:
+    httpGet:
+      path: /
+      port: http
+    failureThreshold: 3
+    timeoutSeconds: 1
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    failureThreshold: 3
+    timeoutSeconds: 1
+    periodSeconds: 10
+
+  autoscaling:
+    enabled: false
+
+  podAnnotations: {}
+  podLabels: {}
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  volumes: []
+  volumeMounts: []
