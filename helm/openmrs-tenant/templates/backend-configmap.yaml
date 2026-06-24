@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "openmrs-tenant.backend.fullname" . }}
+  labels:
+    {{- include "openmrs-tenant.backend.labels" . | nindent 4 }}
+data:
+  OMRS_DB: "mariadb"
+  OMRS_DB_HOSTNAME: {{ required "backend.db.hostname is required" .Values.backend.db.hostname | quote }}
+  OMRS_DB_PORT: {{ .Values.backend.db.port | quote }}
+  OMRS_DB_NAME: {{ required "backend.db.database is required" .Values.backend.db.database | quote }}
+  {{- if .Values.backend.db.url }}
+  OMRS_DB_URL: {{ .Values.backend.db.url | quote }}
+  {{- else }}
+  OMRS_DB_URL: {{ printf "jdbc:mariadb://%s:%s/%s?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true" .Values.backend.db.hostname (toString .Values.backend.db.port) .Values.backend.db.database | quote }}
+  {{- end }}
+  {{- if .Values.backend.infinispan.clustered }}
+  cache.type: "cluster"
+  {{- else }}
+  cache.type: "local"
+  {{- end }}
+  storage.type: "local"
