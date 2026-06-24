@@ -98,6 +98,97 @@ To disable monitoring (Grafana, Loki, Alloy), set `openmrs-backend.monitoring.en
 | `SKIP_OPERATORS=true` | `false` | Skip `openmrs-operator` chart install |
 | `SKIP_OPENMRS=true` | `false` | Skip OpenMRS deployment (exit after step 3) |
 
+### 6. Deploy additional tenants (multi-tenancy)
+
+The `helm/openmrs-tenant` chart deploys an isolated OpenMRS tenant (backend + frontend)
+that shares the primary cluster's MariaDB. Each tenant gets its own namespace with
+separate ConfigMaps, Secrets, Services, and labelled pods.
+
+#### Prerequisites
+
+- Primary OpenMRS stack deployed and running (steps 1–4 above)
+- MariaDB accessible from tenant namespace (default DNS: `openmrs-mariadb.openmrs.svc.cluster.local`)
+- A database and user created for the tenant:
+
+```bash
+kubectl exec -n openmrs svc/openmrs-mariadb -- mysql -u root -pRoot123 -e "
+  CREATE DATABASE IF NOT EXISTS openmrs_<tenant> CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+  CREATE USER IF NOT EXISTS '<tenant>_user'@'%' IDENTIFIED BY '<password>';
+  GRANT ALL PRIVILEGES ON openmrs_<tenant>.* TO '<tenant>_user'@'%';
+  FLUSH PRIVILEGES;
+"
+```
+
+#### Install a tenant
+
+```bash
+helm install <tenant> helm/openmrs-tenant \
+  -n tenant-<tenant> --create-namespace \
+  --set tenant.name=<tenant> \
+  --set global.defaultStorageClass=standard \
+  --set backend.db.hostname=openmrs-mariadb.openmrs.svc.cluster.local \
+  --set backend.db.database=openmrs_<tenant> \
+  --set backend.db.user=<tenant>_user \
+  --set backend.db.password=<password>
+```
+
+Example for a tenant named `coast`:
+
+```bash
+helm install coast helm/openmrs-tenant \
+  -n tenant-coast --create-namespace \
+  --set tenant.name=coast \
+  --set global.defaultStorageClass=standard \
+  --set backend.db.hostname=openmrs-mariadb.openmrs.svc.cluster.local \
+  --set backend.db.database=openmrs_coast \
+  --set backend.db.user=coast_user \
+  --set backend.db.password=CoastPass123
+```
+
+#### Verification
+
+```bash
+# Check pods with tenant label
+kubectl get pods -n tenant-<tenant> -L app.kubernetes.io/tenant
+
+# Wait for ready
+kubectl wait --for=condition=ready pod -n tenant-<tenant> --all --timeout=600s
+
+# Port-forward to backend (API)
+kubectl port-forward -n tenant-<tenant> svc/<tenant>-backend 8080:8080
+
+# Port-forward to frontend (SPA)
+kubectl port-forward -n tenant-<tenant> svc/<tenant>-frontend 8081:80
+```
+
+> **Note on routing:** Currently each tenant's backend and frontend are separate
+> services in their own namespace. You access them via `kubectl port-forward`
+> as shown above. In the future, tenant-specific Gateway API HTTPRoute resources
+> will be added to place the frontend and backend behind the same hostname
+> (e.g. `<tenant>.example.com`) with path-based routing — `/openmrs/spa` to the
+> frontend and `/openmrs` to the backend — eliminating the need for
+> port-forwarding, just like the primary OpenMRS stack.
+
+#### Tenant chart parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `tenant.name` | Tenant identifier (used as resource prefix) | **required** |
+| `global.defaultStorageClass` | Default StorageClass for PVCs | `""` |
+| `backend.image.repository` | Backend image | `openmrs/openmrs-reference-application-3-backend` |
+| `backend.image.tag` | Backend image tag | `nightly-core-2.8` |
+| `backend.replicaCount` | Backend StatefulSet replicas | `1` |
+| `backend.db.hostname` | MariaDB hostname | **required** |
+| `backend.db.port` | MariaDB port | `3306` |
+| `backend.db.database` | Database name | **required** |
+| `backend.db.user` | Database user | **required** |
+| `backend.db.password` | Database password | **required** |
+| `backend.storage.size` | PVC size for /openmrs/data | `8Gi` |
+| `backend.storage.storageClass` | Backend PVC StorageClass (defaults to `global.defaultStorageClass`) | `""` |
+| `frontend.image.repository` | Frontend image | `openmrs/openmrs-reference-application-3-frontend` |
+| `frontend.image.tag` | Frontend image tag | `nightly-core-2.8` |
+| `frontend.replicaCount` | Frontend Deployment replicas | `1` |
+
 ### Alternative: install from Helm registry
 
       helm repo add openmrs https://openmrs.github.io/openmrs-contrib-cluster/

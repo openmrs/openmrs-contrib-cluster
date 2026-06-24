@@ -1,0 +1,12 @@
+Congratulations! The OpenMRS Tenant has been successfully deployed!
+
+Tenant: {{ .Values.tenant.name }}
+Backend: {{ include "openmrs-tenant.backend.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.backend.service.port }}
+Frontend: {{ include "openmrs-tenant.frontend.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.frontend.service.port }}
+
+To verify the tenant label:
+  kubectl get pods -n {{ .Release.Namespace }} -L app.kubernetes.io/tenant
+
+To port-forward for local access:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "openmrs-tenant.backend.fullname" . }} 8080:{{ .Values.backend.service.port }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "openmrs-tenant.frontend.fullname" . }} 8081:{{ .Values.frontend.service.port }}
