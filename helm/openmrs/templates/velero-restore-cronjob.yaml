@@ -1,0 +1,113 @@
+{{- if and .Values.backup.enabled .Values.backup.restore.enabled }}
+# ClusterRole — gives the restore checker permission to read pods and manage restores
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-restore-checker
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: ["velero.io"]
+    resources: ["backups", "restores"]
+    verbs: ["get", "list", "create"]
+---
+# ClusterRoleBinding — connects the permission above to our service account 
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Name }}-restore-checker
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Name }}-restore-checker
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-restore-checker
+    namespace: {{ .Release.Namespace }}
+---
+# ServiceAccount — the identity that the restore checker runs 
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name }}-restore-checker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+---
+# CronJob — health check that auto-restores when OpenMRS is genuinely broken 
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-restore-check
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.restore.schedule | quote }}
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: {{ .Release.Name }}-restore-checker
+          restartPolicy: OnFailure
+          containers:
+            - name: restore-check
+              image: bitnami/kubectl:1.30-debian-12
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "=== OpenMRS Scheduled Restore $(date) ==="
+                  VELERO_NAMESPACE={{ .Values.backup.veleroNamespace }}
+                  APP_NAMESPACE={{ .Release.Namespace }}
+
+                  # Find the most recent completed backup in the Velero namespace.
+                  # Velero stores its Backup resources in its own namespace,
+                  # not in the application namespace.
+                  LATEST_BACKUP=$(kubectl get backup.velero.io \
+                    -n "$VELERO_NAMESPACE" \
+                    --sort-by=.metadata.creationTimestamp \
+                    --no-headers 2>/dev/null | \
+                    grep 'Completed' | tail -1 | awk '{print $1}')
+
+                  if [ -z "$LATEST_BACKUP" ]; then
+                    echo "No completed backups found in $VELERO_NAMESPACE. Skipping restore."
+                    exit 0
+                  fi
+
+                  echo "Latest backup: $LATEST_BACKUP"
+
+                  # Skip if a restore is already running
+                  ACTIVE=$(kubectl get restore.velero.io \
+                    -n "$VELERO_NAMESPACE" \
+                    --no-headers 2>/dev/null | \
+                    grep -cE 'InProgress' || true)
+
+                  if [ "$ACTIVE" -gt 0 ]; then
+                    echo "A restore is already in progress. Skipping."
+                    exit 0
+                  fi
+
+                  echo "Triggering scheduled restore from: $LATEST_BACKUP"
+
+                  cat <<EOF | kubectl apply -f -
+                  apiVersion: velero.io/v1
+                  kind: Restore
+                  metadata:
+                    name: scheduled-restore-$(date +%Y%m%d%H%M)
+                    namespace: $VELERO_NAMESPACE
+                  spec:
+                    backupName: $LATEST_BACKUP
+                    includedNamespaces:
+                      - $APP_NAMESPACE
+                    existingResourcePolicy: replace
+                  EOF
+
+                  echo "Restore submitted successfully."
+{{- end }}

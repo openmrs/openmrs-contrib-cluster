@@ -1,0 +1,13 @@
+{{- if .Values.backup.enabled }}
+{{/*
+  Pre-install check — verifies that Velero is already installed on the cluster
+  before we try to create any Velero resources
+  Velero must be treated as a cluster-level prerequisite, not a sub-chart,
+  to avoid race conditions where Kubernetes tries to create Velero CRDs
+  before Velero itself is fully registered.
+*/}}
+{{- $crd := lookup "apiextensions.k8s.io/v1" "CustomResourceDefinition" "" "schedules.velero.io" }}
+{{- if not $crd }}
+{{- fail "Velero is not installed on this cluster. Please install Velero before enabling the backup feature. See https://velero.io/docs/latest/basic-install/" }}
+{{- end }}
+{{- end }}
