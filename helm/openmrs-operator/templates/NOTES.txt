@@ -1,0 +1,11 @@
+Cluster operators installed in {{ .Release.Namespace }}:
+
+  MariaDB operator (3 components)
+  ECK operator
+  Traefik
+
+Gateway API CRDs: provided by Kind v0.27+ (built-in).
+local-path-provisioner: provided by Kind v0.27+ (built-in).
+
+Next step:
+  cd helm && make deploy-openmrs

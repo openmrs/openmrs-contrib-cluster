@@ -16,6 +16,8 @@ openmrs-backend:
     periodSeconds: 10
   gateway:
     enabled: true
+    parentRefs:
+      namespace: openmrs-system
   infinispan:
     clustered: true
   monitoring:
@@ -93,6 +95,10 @@ openmrs-backend:
       createBuckets:
         - name: openmrs
 openmrs-frontend:
+  gateway:
+    enabled: true
+    parentRefs:
+      namespace: openmrs-system
   image:
     repository: openmrs/openmrs-reference-application-3-frontend
     tag: nightly-0-core-2.8
