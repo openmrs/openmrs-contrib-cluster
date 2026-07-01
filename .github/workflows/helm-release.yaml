@@ -31,6 +31,9 @@ jobs:
       - name: Add Helm Repositories
         run: |
           helm repo add grafana https://grafana.github.io/helm-charts
+          helm repo add mariadb-operator https://helm.mariadb.com/mariadb-operator
+          helm repo add elastic https://helm.elastic.co
+          helm repo add traefik https://traefik.github.io/charts
 
       - name: Set Chart Version
         if: github.event_name == 'workflow_dispatch'
@@ -41,6 +44,7 @@ jobs:
           sed -i "s/^version: .*/version: $VERSION/" helm/openmrs/Chart.yaml
           sed -i "s/^version: .*/version: $VERSION/" helm/openmrs-backend/Chart.yaml
           sed -i "s/^version: .*/version: $VERSION/" helm/openmrs-frontend/Chart.yaml
+          sed -i "s/^version: .*/version: $VERSION/" helm/openmrs-operator/Chart.yaml
           # Update dependency versions in main chart
           sed -i "/name: openmrs-backend/,/version:/ s/version: .*/version: $VERSION/" helm/openmrs/Chart.yaml
           sed -i "/name: openmrs-frontend/,/version:/ s/version: .*/version: $VERSION/" helm/openmrs/Chart.yaml
@@ -50,6 +54,7 @@ jobs:
           helm dependency update helm/openmrs-backend
           helm dependency update helm/openmrs-frontend
           helm dependency update helm/openmrs
+          helm dependency update helm/openmrs-operator
 
       - name: Commit and Push Changes
         if: github.event_name == 'workflow_dispatch'

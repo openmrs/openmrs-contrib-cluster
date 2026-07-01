@@ -44,8 +44,8 @@ spec:
             secretName: {{ .Release.Name }}-elasticsearch-eck-es-elastic-user
         {{- end }}
 
-      {{- if .Values.elasticsearch.enabled }}
       initContainers:
+      {{- if .Values.elasticsearch.enabled }}
         - name: import-es-ca
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           command:

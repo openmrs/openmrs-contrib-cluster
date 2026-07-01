@@ -1,0 +1,44 @@
+mariadb-operator-crds:
+  enabled: true
+
+mariadb-operator:
+  enabled: true
+
+eck-operator:
+  enabled: true
+
+traefik:
+  enabled: true
+
+  providers:
+    kubernetesIngress:
+      enabled: false
+    kubernetesCRD:
+      enabled: true
+    kubernetesGateway:
+      enabled: true
+
+  gateway:
+    enabled: true
+    listeners:
+      web:
+        port: 8000
+        protocol: HTTP
+        namespacePolicy: All
+
+  ports:
+    web:
+      port: 8000
+      hostPort: 8080
+      exposedPort: 80
+
+  service:
+    enabled: true
+    type: ClusterIP
+
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: ""
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule

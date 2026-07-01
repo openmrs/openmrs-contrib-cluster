@@ -169,7 +169,7 @@ gateway:
   path: /openmrs/
   parentRefs:
     name: traefik-gateway
-    namespace: kube-system
+    namespace: openmrs-system
 
 traefikService:
   enabled: false
@@ -214,9 +214,10 @@ readinessProbe:
   httpGet:
     path: /openmrs/health/started
     port: 8080
-  failureThreshold: 1
-  timeoutSeconds: 1
-  periodSeconds: 10
+  initialDelaySeconds: 60
+  failureThreshold: 10
+  timeoutSeconds: 5
+  periodSeconds: 15
 startupProbe:
   httpGet:
     path: /openmrs/health/started

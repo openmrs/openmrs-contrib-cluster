@@ -6,4 +6,4 @@ dependencies:
   repository: file://../openmrs-frontend
   version: 1.2.2
 digest: sha256:987afabe6b279b1a4ef89339272caad38930c7fbc2607a991032bfc163538033
-generated: "2026-06-01T11:20:18.483478736+03:00"
+generated: "2026-06-10T16:32:01.546925672+03:00"

@@ -1,0 +1,15 @@
+dependencies:
+- name: mariadb-operator-crds
+  repository: https://helm.mariadb.com/mariadb-operator
+  version: 26.6.0
+- name: mariadb-operator
+  repository: https://helm.mariadb.com/mariadb-operator
+  version: 26.6.0
+- name: eck-operator
+  repository: https://helm.elastic.co
+  version: 2.16.0
+- name: traefik
+  repository: https://traefik.github.io/charts
+  version: 34.0.0
+digest: sha256:028474bfd05c8e79f9ad7eff0cb22e002cc4f5e2a60dcd93718125d31d1cfa58
+generated: "2026-06-23T15:57:31.342120473+03:00"
