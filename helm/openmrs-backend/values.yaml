@@ -92,6 +92,7 @@ elasticsearch-eck:
             storage: 10Gi
 
 seaweedfs:
+  enabled: false
   master:
     replicas: 3
     route:
