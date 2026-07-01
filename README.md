@@ -66,7 +66,17 @@ Once deployment completes, OpenMRS is available at:
 
       http://localhost:8080/openmrs/spa/login
 
-No port-forwarding needed — Traefik binds the port directly.
+With monitoring enabled (default in `kind-openmrs.yaml`), additional dashboards are available at:
+
+| Service | URL |
+|---------|-----|
+| Grafana | http://localhost:8080/grafana/ |
+| SeaweedFS Master | http://localhost:8080/seaweedfs-master/ |
+| SeaweedFS Filer | http://localhost:8080/seaweedfs-filer/ |
+
+No port-forwarding needed — Traefik binds the port directly. Grafana credentials: `admin` / `Admin123`.
+
+To disable monitoring, set `openmrs-backend.monitoring.enabled=false` in `kind-openmrs.yaml` or pass `--set openmrs-backend.monitoring.enabled=false` to `helm`.
 
 ### Make targets
 
@@ -159,13 +169,22 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `tr
 | `openmrs-backend.elasticsearch.disableSecurity` | Disable TLS and authentication (local/dev only, never use in production) | `false` |
 | `openmrs-backend.monitoring.enabled`                             | Enable monitoring (Grafana, Loki, Alloy)                                                                               | `"false"`                                                 |
 | `openmrs-backend.grafana.adminPassword`                          | Grafana admin password                                                                                                 | `"Admin123"`                                              |
-| `openmrs-backend.grafana.ingress.enabled`                        | Enable ingress for Grafana                                                                                             | `"true"`                                                  |
+| `openmrs-backend.grafana.ingress.enabled`                        | Enable ingress for Grafana (disabled when using HTTPRoute)                                                             | `"true"`                                                  |
 | `openmrs-backend.grafana.ingress.hosts`                          | Hosts for Grafana ingress                                                                                              | `["grafana.local"]`                                       |
+| `openmrs-backend.grafana.httpRoute.enabled`                      | Enable Gateway API HTTPRoute for Grafana                                                                               | `"false"`                                                 |
+| `openmrs-backend.grafana.httpRoute.hostnames`                    | Hostnames for Grafana HTTPRoute                                                                                        | `["localhost"]`                                            |
+| `openmrs-backend.grafana.httpRoute.path`                         | Path prefix for Grafana HTTPRoute                                                                                      | `"/grafana"`                                              |
 | `openmrs-backend.seaweedfs.enabled`                        | Deploy SeaweedFS S3-compatible object storage                                                    | `"false"`                                                 |
 | `openmrs-backend.seaweedfs.master.replicas`                | Number of SeaweedFS master nodes for Raft consensus                                                               | `3`                                                       |
+| `openmrs-backend.seaweedfs.master.route.enabled`           | Enable Gateway API HTTPRoute for SeaweedFS Master UI                                                              | `"false"`                                                 |
+| `openmrs-backend.seaweedfs.master.route.hostnames`         | Hostnames for SeaweedFS Master HTTPRoute                                                                          | `["localhost"]`                                            |
+| `openmrs-backend.seaweedfs.master.route.path`              | Path prefix for SeaweedFS Master HTTPRoute                                                                        | `"/seaweedfs-master"`                                     |
 | `openmrs-backend.seaweedfs.volume.replicas`                | Number of SeaweedFS volume servers (data storage pods); one per worker node recommended                           | `3`                                                       |
 | `openmrs-backend.seaweedfs.volume.dataDirs[0].size`        | Persistent volume size per volume server pod                                                                      | `"8Gi"`                                                   |
 | `openmrs-backend.seaweedfs.filer.replicas`                 | Number of SeaweedFS filer replicas for metadata store (3+ recommended for HA)                                     | `3`                                                       |
+| `openmrs-backend.seaweedfs.filer.route.enabled`            | Enable Gateway API HTTPRoute for SeaweedFS Filer UI                                                               | `"false"`                                                 |
+| `openmrs-backend.seaweedfs.filer.route.hostnames`          | Hostnames for SeaweedFS Filer HTTPRoute                                                                           | `["localhost"]`                                            |
+| `openmrs-backend.seaweedfs.filer.route.path`               | Path prefix for SeaweedFS Filer HTTPRoute                                                                         | `"/seaweedfs-filer"`                                      |
 | `openmrs-backend.seaweedfs.s3.replicas`                    | Number of S3 API gateway replicas (stateless)                                                                     | `2`                                                       |
 | `openmrs-backend.seaweedfs.s3.enableAuth`                  | Enable S3 credential authentication                                                                               | `"true"`                                                  |
 | `openmrs-backend.seaweedfs.s3.credentials.admin.accessKey` | S3 access key (must match backend's `storage.s3.accessKeyId`)                                                     | `"openmrs"`                                               |
@@ -224,6 +243,33 @@ The chart creates a pre-install hook Job that creates the `filemeta` table befor
 
 See [SeaweedFS documentation](https://github.com/seaweedfs/seaweedfs/wiki)
 for full details.
+
+### Security Notes (Production)
+
+The default values in `kind-openmrs.yaml` are optimized for local development
+and **must be reviewed before production use**:
+
+| Concern | Local dev | Production |
+|---------|-----------|------------|
+| Grafana default credentials (`admin`/`Admin123`) | Safe — localhost only | **Must change** — use a strong password or SSO |
+| SeaweedFS security (`enableSecurity: false`) | Safe — no external access | **Must enable** — otherwise data is publicly accessible |
+| HTTP (no TLS) | Fine — localhost only | **Must enable TLS** on the Gateway listener |
+| HTTPRoute auth | Safe — traffic is cluster-internal only | **Add auth middleware** (e.g., OAuth, basic auth) via HTTPRoute filters or a reverse proxy |
+
+For production, start with these overrides:
+
+```yaml
+grafana:
+  adminPassword: "<strong-password>"
+seaweedfs:
+  global:
+    seaweedfs:
+      enableSecurity: true
+```
+
+TLS can be configured by adding a certificate to the Gateway listener in
+`helm/kind-traefik.yaml` and switching `kind-openmrs.yaml` to `https`.
+
 ### Terraform and AWS
 
 #### Setting up terraform and AWS

@@ -1,0 +1,31 @@
+{{- if and .Values.seaweedfs.enabled .Values.seaweedfs.master.route.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ .Release.Name }}-seaweedfs-master
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs-backend.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: {{ .Values.seaweedfs.master.route.parentRefs.name }}
+      namespace: {{ .Values.seaweedfs.master.route.parentRefs.namespace }}
+  {{- with .Values.seaweedfs.master.route.hostnames }}
+  hostnames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: {{ .Values.seaweedfs.master.route.path }}
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: {{ .Release.Name }}-seaweedfs-master
+          port: 9333
+{{- end }}

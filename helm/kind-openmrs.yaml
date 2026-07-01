@@ -22,6 +22,22 @@ openmrs-backend:
     clustered: true
   monitoring:
     enabled: true
+  grafana:
+    ingress:
+      enabled: false
+    route: {}
+    httpRoute:
+      enabled: true
+      hostnames:
+        - localhost
+      path: /grafana
+    grafana.ini:
+      server:
+        domain: localhost
+        root_url: "http://localhost:8080/grafana"
+        serve_from_sub_path: true
+      dashboards:
+        default_home_dashboard_path: /var/lib/grafana/dashboards/default/logs-dashboard.json
   mariadb:
     enabled: true
   elasticsearch:
@@ -61,6 +77,11 @@ openmrs-backend:
         enableSecurity: false
     master:
       replicas: 3
+      route:
+        enabled: true
+        hostnames:
+          - localhost
+        path: /seaweedfs-master
     volume:
       enabled: true
       replicas: 3
@@ -73,6 +94,11 @@ openmrs-backend:
     filer:
       enabled: true
       replicas: 3
+      route:
+        enabled: true
+        hostnames:
+          - localhost
+        path: /seaweedfs-filer
       extraEnvironmentVars:
         WEED_MYSQL_ENABLED: "true"
         WEED_MYSQL_HOSTNAME: "{{ .Release.Name }}-mariadb"
@@ -99,6 +125,8 @@ openmrs-frontend:
     enabled: true
     parentRefs:
       namespace: openmrs-system
+  rootRedirect:
+    enabled: true
   image:
     repository: openmrs/openmrs-reference-application-3-frontend
     tag: nightly-0-core-2.8

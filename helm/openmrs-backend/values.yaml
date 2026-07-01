@@ -94,6 +94,14 @@ elasticsearch-eck:
 seaweedfs:
   master:
     replicas: 3
+    route:
+      enabled: false
+      parentRefs:
+        name: traefik-gateway
+        namespace: openmrs-system
+      hostnames:
+        - localhost
+      path: /seaweedfs-master
   volume:
     enabled: true
     replicas: 3
@@ -106,6 +114,14 @@ seaweedfs:
   filer:
     enabled: true
     replicas: 3
+    route:
+      enabled: false
+      parentRefs:
+        name: traefik-gateway
+        namespace: openmrs-system
+      hostnames:
+        - localhost
+      path: /seaweedfs-filer
     extraEnvironmentVars:
       WEED_MYSQL_ENABLED: "true"
       WEED_MYSQL_HOSTNAME: "{{ .Release.Name }}-mariadb"
@@ -243,8 +259,8 @@ grafana:
   adminPassword: "Admin123"
   grafana.ini: # Needed for serving from path
     server:
-      domain: grafana.local
-      root_url: "%(protocol)s://%(domain)s/grafana"
+      domain: localhost
+      root_url: "http://localhost:8080/grafana"
       serve_from_sub_path: true
     dashboards:
       default_home_dashboard_path: /var/lib/grafana/dashboards/default/logs-dashboard.json
@@ -256,8 +272,18 @@ grafana:
   ingress:
     enabled: true
     hosts:
-      - "grafana.local"
+      - "localhost"
     path: '/grafana'
+  route: {}
+  # Custom HTTPRoute config used by grafana-httproute.yaml
+  httpRoute:
+    enabled: false
+    parentRefs:
+      name: traefik-gateway
+      namespace: openmrs-system
+    hostnames:
+      - localhost
+    path: /grafana
   datasources:
     datasources.yaml:
       apiVersion: 1
