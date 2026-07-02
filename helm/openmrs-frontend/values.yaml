@@ -50,6 +50,15 @@ gateway:
     name: traefik-gateway
     namespace: openmrs-system
 
+rootRedirect:
+  enabled: false
+  targetPath: /openmrs/spa/home
+  parentRefs:
+    name: traefik-gateway
+    namespace: openmrs-system
+  hostnames:
+    - localhost
+
 ingress:
   enabled: false
   className: "nginx"
