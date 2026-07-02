@@ -1,4 +1,4 @@
-{{- if and .Values.seaweedfs.enabled .Values.seaweedfs.filer.route.enabled }}
+{{- if and .Values.seaweedfs.enabled .Values.seaweedfs.filer.httpRoute.enabled }}
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -8,9 +8,9 @@ metadata:
     {{- include "openmrs-backend.labels" . | nindent 4 }}
 spec:
   parentRefs:
-    - name: {{ .Values.seaweedfs.filer.route.parentRefs.name }}
-      namespace: {{ .Values.seaweedfs.filer.route.parentRefs.namespace }}
-  {{- with .Values.seaweedfs.filer.route.hostnames }}
+    - name: {{ .Values.seaweedfs.filer.httpRoute.parentRefs.name }}
+      namespace: {{ .Values.seaweedfs.filer.httpRoute.parentRefs.namespace }}
+  {{- with .Values.seaweedfs.filer.httpRoute.hostnames }}
   hostnames:
     {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -18,13 +18,20 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: {{ .Values.seaweedfs.filer.route.path }}
+            value: {{ .Values.seaweedfs.filer.httpRoute.path }}
       filters:
         - type: URLRewrite
           urlRewrite:
             path:
               type: ReplacePrefixMatch
               replacePrefixMatch: /
+      backendRefs:
+        - name: {{ .Release.Name }}-seaweedfs-filer
+          port: 8888
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /seaweedfsstatic
       backendRefs:
         - name: {{ .Release.Name }}-seaweedfs-filer
           port: 8888

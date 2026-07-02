@@ -95,7 +95,7 @@ seaweedfs:
   enabled: false
   master:
     replicas: 3
-    route:
+    httpRoute:
       enabled: false
       parentRefs:
         name: traefik-gateway
@@ -115,7 +115,7 @@ seaweedfs:
   filer:
     enabled: true
     replicas: 3
-    route:
+    httpRoute:
       enabled: false
       parentRefs:
         name: traefik-gateway
@@ -271,7 +271,7 @@ grafana:
       timeout: 300
       keep_alive_seconds: 300
   ingress:
-    enabled: true
+    enabled: false
     hosts:
       - "localhost"
     path: '/grafana'

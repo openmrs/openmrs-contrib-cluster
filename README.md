@@ -70,9 +70,9 @@ With monitoring enabled (default in `kind-openmrs.yaml`), additional dashboards 
 
 | Service | URL |
 |---------|-----|
-| Grafana | http://localhost:8080/grafana/ |
-| SeaweedFS Master | http://localhost:8080/seaweedfs-master/ |
-| SeaweedFS Filer | http://localhost:8080/seaweedfs-filer/ |
+| Grafana (logs dashboard) | http://localhost:8080/grafana/ |
+| SeaweedFS Master (cluster overview) | http://localhost:8080/seaweedfs-master/ |
+| SeaweedFS Filer (file browser) | http://localhost:8080/seaweedfs-filer/ |
 
 No port-forwarding needed — Traefik binds the port directly. Grafana credentials: `admin` / `Admin123`.
 

@@ -77,7 +77,7 @@ openmrs-backend:
         enableSecurity: false
     master:
       replicas: 3
-      route:
+      httpRoute:
         enabled: true
         hostnames:
           - localhost
@@ -94,7 +94,7 @@ openmrs-backend:
     filer:
       enabled: true
       replicas: 3
-      route:
+      httpRoute:
         enabled: true
         hostnames:
           - localhost
