@@ -77,11 +77,6 @@ openmrs-backend:
         enableSecurity: false
     master:
       replicas: 3
-      httpRoute:
-        enabled: true
-        hostnames:
-          - localhost
-        path: /seaweedfs-master
     volume:
       enabled: true
       replicas: 3
@@ -94,11 +89,6 @@ openmrs-backend:
     filer:
       enabled: true
       replicas: 3
-      httpRoute:
-        enabled: true
-        hostnames:
-          - localhost
-        path: /seaweedfs-filer
       extraEnvironmentVars:
         WEED_MYSQL_ENABLED: "true"
         WEED_MYSQL_HOSTNAME: "{{ .Release.Name }}-mariadb"
@@ -110,6 +100,15 @@ openmrs-backend:
           secretKeyRef:
             name: "openmrs-backend-mariadb-secret"
             key: user-password
+    admin:
+      enabled: true
+      urlPrefix: /seaweedfs-admin
+      ingress:
+        enabled: false
+      httpRoute:
+        enabled: true
+      secret:
+        adminPassword: Admin123
     s3:
       enabled: true
       replicas: 2

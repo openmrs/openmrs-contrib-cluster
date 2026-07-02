@@ -95,14 +95,6 @@ seaweedfs:
   enabled: false
   master:
     replicas: 3
-    httpRoute:
-      enabled: false
-      parentRefs:
-        name: traefik-gateway
-        namespace: openmrs-system
-      hostnames:
-        - localhost
-      path: /seaweedfs-master
   volume:
     enabled: true
     replicas: 3
@@ -115,14 +107,6 @@ seaweedfs:
   filer:
     enabled: true
     replicas: 3
-    httpRoute:
-      enabled: false
-      parentRefs:
-        name: traefik-gateway
-        namespace: openmrs-system
-      hostnames:
-        - localhost
-      path: /seaweedfs-filer
     extraEnvironmentVars:
       WEED_MYSQL_ENABLED: "true"
       WEED_MYSQL_HOSTNAME: "{{ .Release.Name }}-mariadb"
@@ -134,6 +118,18 @@ seaweedfs:
         secretKeyRef:
           name: "openmrs-backend-mariadb-secret"
           key: user-password
+  admin:
+    enabled: false
+    urlPrefix: /seaweedfs-admin
+    ingress:
+      enabled: false
+    httpRoute:
+      enabled: false
+      parentRefs:
+        name: traefik-gateway
+        namespace: openmrs-system
+      hostnames:
+        - localhost
   s3:
     enabled: true
     replicas: 2

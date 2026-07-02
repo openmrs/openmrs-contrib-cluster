@@ -71,10 +71,9 @@ With monitoring enabled (default in `kind-openmrs.yaml`), additional dashboards 
 | Service | URL |
 |---------|-----|
 | Grafana (logs dashboard) | http://localhost:8080/grafana/ |
-| SeaweedFS Master (cluster overview) | http://localhost:8080/seaweedfs-master/ |
-| SeaweedFS Filer (file browser) | http://localhost:8080/seaweedfs-filer/ |
+| SeaweedFS Admin (cluster overview & file browser) | http://localhost:8080/seaweedfs-admin/ |
 
-No port-forwarding needed — Traefik binds the port directly. Grafana credentials: `admin` / `Admin123`.
+No port-forwarding needed — Traefik binds the port directly. Default credentials: Grafana `admin` / `Admin123`, SeaweedFS Admin `admin` / `Admin123`.
 
 To disable monitoring, set `openmrs-backend.monitoring.enabled=false` in `kind-openmrs.yaml` or pass `--set openmrs-backend.monitoring.enabled=false` to `helm`.
 
@@ -176,15 +175,14 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `tr
 | `openmrs-backend.grafana.httpRoute.path`                         | Path prefix for Grafana HTTPRoute                                                                                      | `"/grafana"`                                              |
 | `openmrs-backend.seaweedfs.enabled`                        | Deploy SeaweedFS S3-compatible object storage                                                    | `"false"`                                                 |
 | `openmrs-backend.seaweedfs.master.replicas`                | Number of SeaweedFS master nodes for Raft consensus                                                               | `3`                                                       |
-| `openmrs-backend.seaweedfs.master.route.enabled`           | Enable Gateway API HTTPRoute for SeaweedFS Master UI                                                              | `"false"`                                                 |
-| `openmrs-backend.seaweedfs.master.route.hostnames`         | Hostnames for SeaweedFS Master HTTPRoute                                                                          | `["localhost"]`                                            |
-| `openmrs-backend.seaweedfs.master.route.path`              | Path prefix for SeaweedFS Master HTTPRoute                                                                        | `"/seaweedfs-master"`                                     |
 | `openmrs-backend.seaweedfs.volume.replicas`                | Number of SeaweedFS volume servers (data storage pods); one per worker node recommended                           | `3`                                                       |
 | `openmrs-backend.seaweedfs.volume.dataDirs[0].size`        | Persistent volume size per volume server pod                                                                      | `"8Gi"`                                                   |
 | `openmrs-backend.seaweedfs.filer.replicas`                 | Number of SeaweedFS filer replicas for metadata store (3+ recommended for HA)                                     | `3`                                                       |
-| `openmrs-backend.seaweedfs.filer.route.enabled`            | Enable Gateway API HTTPRoute for SeaweedFS Filer UI                                                               | `"false"`                                                 |
-| `openmrs-backend.seaweedfs.filer.route.hostnames`          | Hostnames for SeaweedFS Filer HTTPRoute                                                                           | `["localhost"]`                                            |
-| `openmrs-backend.seaweedfs.filer.route.path`               | Path prefix for SeaweedFS Filer HTTPRoute                                                                         | `"/seaweedfs-filer"`                                      |
+| `openmrs-backend.seaweedfs.admin.enabled`                  | Deploy SeaweedFS Admin component                                                                               | `"false"`                                                 |
+| `openmrs-backend.seaweedfs.admin.urlPrefix`                | URL path prefix for admin dashboard                                                                               | `"/seaweedfs-admin"`                                      |
+| `openmrs-backend.seaweedfs.admin.httpRoute.enabled`        | Enable Gateway API HTTPRoute for admin dashboard                                                                  | `"false"`                                                 |
+| `openmrs-backend.seaweedfs.admin.httpRoute.hostnames`      | Hostnames for admin HTTPRoute                                                                                     | `["localhost"]`                                            |
+| `openmrs-backend.seaweedfs.admin.secret.adminPassword`     | Admin dashboard password (empty = no auth)                                                                        | `"Admin123"`                                              |
 | `openmrs-backend.seaweedfs.s3.replicas`                    | Number of S3 API gateway replicas (stateless)                                                                     | `2`                                                       |
 | `openmrs-backend.seaweedfs.s3.enableAuth`                  | Enable S3 credential authentication                                                                               | `"true"`                                                  |
 | `openmrs-backend.seaweedfs.s3.credentials.admin.accessKey` | S3 access key (must match backend's `storage.s3.accessKeyId`)                                                     | `"openmrs"`                                               |
@@ -253,6 +251,7 @@ and **must be reviewed before production use**:
 |---------|-----------|------------|
 | Grafana default credentials (`admin`/`Admin123`) | Safe — localhost only | **Must change** — use a strong password or SSO |
 | SeaweedFS security (`enableSecurity: false`) | Safe — no external access | **Must enable** — otherwise data is publicly accessible |
+| SeaweedFS Admin default credentials (`admin`/`Admin123`) | Safe — localhost only | **Must change** — use a strong password |
 | HTTP (no TLS) | Fine — localhost only | **Must enable TLS** on the Gateway listener |
 | HTTPRoute auth | Safe — traffic is cluster-internal only | **Add auth middleware** (e.g., OAuth, basic auth) via HTTPRoute filters or a reverse proxy |
 
@@ -265,6 +264,9 @@ seaweedfs:
   global:
     seaweedfs:
       enableSecurity: true
+  admin:
+    secret:
+      adminPassword: "<strong-password>"
 ```
 
 TLS can be configured by adding a certificate to the Gateway listener in
