@@ -1,4 +1,4 @@
-{{- if .Values.seaweedfs.admin.httpRoute.enabled }}
+{{- if and .Values.seaweedfs.enabled .Values.seaweedfs.admin.enabled .Values.seaweedfs.admin.httpRoute.enabled }}
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

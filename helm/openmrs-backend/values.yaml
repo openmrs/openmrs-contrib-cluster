@@ -257,7 +257,7 @@ grafana:
   grafana.ini: # Needed for serving from path
     server:
       domain: localhost
-      root_url: "http://localhost:8080/grafana"
+      root_url: "%(protocol)s://%(domain)s/grafana"
       serve_from_sub_path: true
     dashboards:
       default_home_dashboard_path: /var/lib/grafana/dashboards/default/logs-dashboard.json
