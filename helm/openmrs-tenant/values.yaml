@@ -3,7 +3,7 @@ tenant:
   hostname: ""
 
 global:
-  defaultStorageClass: "gp2"
+  defaultStorageClass: ""
 
 imagePullSecrets: []
 
@@ -95,6 +95,7 @@ backend:
   affinity: {}
 
 frontend:
+  apiUrl: "/openmrs"
   nameOverride: "frontend"
   fullnameOverride: ""
 

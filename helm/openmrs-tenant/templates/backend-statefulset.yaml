@@ -66,6 +66,11 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /openmrs/data
+      {{- if not .Values.backend.persistence.enabled }}
+      volumes:
+        - name: data
+          emptyDir: {}
+      {{- end }}
       {{- with .Values.backend.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -84,7 +89,9 @@ spec:
         name: data
       spec:
         accessModes: [ "ReadWriteOnce" ]
-        storageClassName: {{ (.Values.backend.persistence.storageClass | default .Values.global.defaultStorageClass) | quote }}
+        {{- with .Values.backend.persistence.storageClass | default .Values.global.defaultStorageClass }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
         resources:
           requests:
             storage: {{ .Values.backend.persistence.size | quote }}
