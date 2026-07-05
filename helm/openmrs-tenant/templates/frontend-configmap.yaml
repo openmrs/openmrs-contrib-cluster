@@ -6,4 +6,4 @@ metadata:
     {{- include "openmrs-tenant.frontend.labels" . | nindent 4 }}
 data:
   SPA_PATH: "/openmrs/spa"
-  API_URL: "/openmrs"
+  API_URL: "{{ .Values.frontend.apiUrl }}"
