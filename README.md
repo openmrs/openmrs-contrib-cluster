@@ -66,16 +66,16 @@ Once deployment completes, OpenMRS is available at:
 
       http://localhost:8080/openmrs/spa/login
 
-With monitoring enabled (default in `kind-openmrs.yaml`), additional dashboards are available at:
+With the default `kind-openmrs.yaml`, the following dashboards are accessible out of the box:
 
-| Service | URL |
-|---------|-----|
-| Grafana (logs dashboard) | http://localhost:8080/grafana/ |
-| SeaweedFS Admin (cluster overview & file browser) | http://localhost:8080/seaweedfs-admin/ |
+| Service | URL | Controlled by |
+|---------|-----|---------------|
+| Grafana (logs dashboard) | http://localhost:8080/grafana/ | `openmrs-backend.monitoring.enabled` |
+| SeaweedFS Admin (cluster overview & file browser) | http://localhost:8080/seaweedfs-admin/ | `openmrs-backend.seaweedfs.admin.httpRoute.enabled` |
 
 No port-forwarding needed — Traefik binds the port directly. Default credentials: Grafana `admin` / `Admin123`, SeaweedFS Admin `admin` / `Admin123`.
 
-To disable monitoring, set `openmrs-backend.monitoring.enabled=false` in `kind-openmrs.yaml` or pass `--set openmrs-backend.monitoring.enabled=false` to `helm`.
+To disable monitoring (Grafana, Loki, Alloy), set `openmrs-backend.monitoring.enabled=false` in `kind-openmrs.yaml` or pass `--set openmrs-backend.monitoring.enabled=false` to `helm`.
 
 ### Make targets
 
