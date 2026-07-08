@@ -72,6 +72,9 @@ backend:
     timeoutSeconds: 1
     periodSeconds: 10
 
+  storage:
+    type: "local"
+
   autoscaling:
     enabled: false
 
@@ -95,7 +98,7 @@ backend:
   affinity: {}
 
 frontend:
-  apiUrl: "/openmrs"
+  apiUrl: "http://localhost:8080/openmrs"
   nameOverride: "frontend"
   fullnameOverride: ""
 

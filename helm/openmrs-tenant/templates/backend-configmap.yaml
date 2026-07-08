@@ -19,4 +19,4 @@ data:
   {{- else }}
   cache.type: "local"
   {{- end }}
-  storage.type: "local"
+  storage.type: {{ .Values.backend.storage.type | quote }}
