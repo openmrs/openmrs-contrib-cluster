@@ -107,7 +107,7 @@ separate ConfigMaps, Secrets, Services, and labelled pods.
 #### Prerequisites
 
 - Primary OpenMRS stack deployed and running (steps 1–4 above)
-- MariaDB accessible from tenant namespace (default DNS: `openmrs-mariadb.openmrs.svc.cluster.local`)
+- MariaDB accessible from tenant namespace (default DNS: `<primary-release>-mariadb.<primary-namespace>.svc.cluster.local`, e.g. `openmrs-mariadb.openmrs.svc.cluster.local`)
 - A database and user created for the tenant:
 
 ```bash
@@ -126,7 +126,7 @@ helm install <tenant> helm/openmrs-tenant \
   -n tenant-<tenant> --create-namespace \
   --set tenant.name=<tenant> \
   --set global.defaultStorageClass=standard \
-  --set backend.db.hostname=openmrs-mariadb.openmrs.svc.cluster.local \
+  --set backend.db.hostname=<primary-release>-mariadb.<primary-namespace>.svc.cluster.local \
   --set backend.db.database=openmrs_<tenant> \
   --set backend.db.user=<tenant>_user \
   --set backend.db.password=<password>
@@ -183,11 +183,20 @@ kubectl port-forward -n tenant-<tenant> svc/<tenant>-frontend 8081:80
 | `backend.db.database` | Database name | **required** |
 | `backend.db.user` | Database user | **required** |
 | `backend.db.password` | Database password | **required** |
-| `backend.storage.size` | PVC size for /openmrs/data | `8Gi` |
-| `backend.storage.storageClass` | Backend PVC StorageClass (defaults to `global.defaultStorageClass`) | `""` |
+| `backend.persistence.size` | PVC size for /openmrs/data | `8Gi` |
+| `backend.persistence.storageClass` | Backend PVC StorageClass (defaults to `global.defaultStorageClass`) | `""` |
+| `backend.storage.type` | Storage type for patient documents | `"local"` |
+| `frontend.apiUrl` | Frontend API URL for SPA backend calls | `"http://localhost:8080/openmrs"` |
 | `frontend.image.repository` | Frontend image | `openmrs/openmrs-reference-application-3-frontend` |
 | `frontend.image.tag` | Frontend image tag | `nightly-core-2.8` |
 | `frontend.replicaCount` | Frontend Deployment replicas | `1` |
+
+> **Note on `storage.type: "local"`:** When `backend.storage.type` is `"local"` (the default),
+> each StatefulSet pod mounts its own dedicated PVC. If `backend.replicaCount > 1`,
+> patient documents uploaded to pod-0 will not be visible on pod-1. For multi-replica
+> setups, configure external shared storage (e.g. S3-compatible SeaweedFS) by setting
+> `backend.storage.type` and the corresponding S3 credentials. SeaweedFS integration
+> is currently available in the parent `openmrs` chart; tenant chart support is planned.
 
 ### Alternative: install from Helm registry
 
