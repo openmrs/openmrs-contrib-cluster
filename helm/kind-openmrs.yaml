@@ -22,6 +22,22 @@ openmrs-backend:
     clustered: true
   monitoring:
     enabled: true
+  grafana:
+    ingress:
+      enabled: false
+    route: {}
+    httpRoute:
+      enabled: true
+      hostnames:
+        - localhost
+      path: /grafana
+    grafana.ini:
+      server:
+        domain: localhost
+        root_url: "http://localhost:8080/grafana"
+        serve_from_sub_path: true
+      dashboards:
+        default_home_dashboard_path: /var/lib/grafana/dashboards/default/logs-dashboard.json
   mariadb:
     enabled: true
   elasticsearch:
@@ -84,6 +100,15 @@ openmrs-backend:
           secretKeyRef:
             name: "openmrs-backend-mariadb-secret"
             key: user-password
+    admin:
+      enabled: true
+      urlPrefix: /seaweedfs-admin
+      ingress:
+        enabled: false
+      httpRoute:
+        enabled: true
+      secret:
+        adminPassword: Admin123
     s3:
       enabled: true
       replicas: 2
@@ -99,6 +124,8 @@ openmrs-frontend:
     enabled: true
     parentRefs:
       namespace: openmrs-system
+  rootRedirect:
+    enabled: true
   image:
     repository: openmrs/openmrs-reference-application-3-frontend
     tag: nightly-0-core-2.8

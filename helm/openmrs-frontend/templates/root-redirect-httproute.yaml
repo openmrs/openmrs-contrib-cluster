@@ -1,0 +1,29 @@
+{{- if and .Values.gateway.enabled .Values.rootRedirect.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "openmrs-frontend.fullname" . }}-root-redirect
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs-frontend.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: {{ .Values.rootRedirect.parentRefs.name }}
+      namespace: {{ .Values.rootRedirect.parentRefs.namespace }}
+  {{- with .Values.rootRedirect.hostnames }}
+  hostnames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            statusCode: 302
+            path:
+              type: ReplaceFullPath
+              replaceFullPath: {{ .Values.rootRedirect.targetPath }}
+{{- end }}
