@@ -3,7 +3,7 @@ global:
 openmrs-backend:
   image:
     repository: openmrs/openmrs-reference-application-3-backend
-    tag: nightly-0-core-2.8
+    tag: 3.7.x-no-demo
     pullPolicy: IfNotPresent #IfNotPresent / Always
   replicaCount: 2
   startupProbe:
@@ -128,5 +128,5 @@ openmrs-frontend:
     enabled: true
   image:
     repository: openmrs/openmrs-reference-application-3-frontend
-    tag: nightly-0-core-2.8
+    tag: 3.7.x
     pullPolicy: IfNotPresent #IfNotPresent / Always
