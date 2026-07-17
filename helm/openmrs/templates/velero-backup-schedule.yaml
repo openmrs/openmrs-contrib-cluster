@@ -5,7 +5,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: {{ .Release.Name }}-velero-credentials
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ .Values.backup.veleroNamespace }}
   labels:
     {{- include "openmrs.labels" . | nindent 4 }}
 type: Opaque
@@ -30,6 +30,9 @@ spec:
   config:
     region: {{ .Values.backup.region }}
     s3ForcePathStyle: {{ .Values.backup.s3ForcePathStyle | quote }}
+    {{- if .Values.backup.s3Url }}
+    s3Url: {{ .Values.backup.s3Url }}
+    {{- end }}
   credential:
     name: {{ .Release.Name }}-velero-credentials
     key: cloud
