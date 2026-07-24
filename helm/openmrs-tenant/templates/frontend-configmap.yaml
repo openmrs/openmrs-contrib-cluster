@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "openmrs-tenant.frontend.fullname" . }}
+  labels:
+    {{- include "openmrs-tenant.frontend.labels" . | nindent 4 }}
+data:
+  SPA_PATH: "/openmrs/spa"
+  API_URL: "{{ .Values.frontend.apiUrl }}"
