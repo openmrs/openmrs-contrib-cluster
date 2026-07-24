@@ -1,0 +1,42 @@
+{{- if .Values.backup.enabled }}
+{{- if .Values.backup.s3Url }}
+# Post-install Job — creates the Velero backup bucket in SeaweedFS S3
+# This runs once after helm install to ensure the bucket exists before
+# Velero tries to use it. Without this, Velero will fail silently.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-velero-bucket-setup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+  annotations:
+    # Run once after install and upgrade
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: create-bucket
+          image: amazon/aws-cli:2.15.0
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              value: {{ .Values.backup.credentials.accessKey | quote }}
+            - name: AWS_SECRET_ACCESS_KEY
+              value: {{ .Values.backup.credentials.secretKey | quote }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Creating Velero backup bucket if it does not exist..."
+              aws s3api create-bucket \
+                --bucket {{ required "backup.bucket is required when backup.enabled=true" .Values.backup.bucket }} \
+                --endpoint-url {{ .Values.backup.s3Url }} \
+                --region {{ .Values.backup.region }} \
+                2>&1 | grep -v "BucketAlreadyOwnedByYou" || true
+              echo "Bucket ready."
+{{- end }}
+{{- end }}

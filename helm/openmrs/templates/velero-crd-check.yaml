@@ -1,0 +1,15 @@
+{{- if .Values.backup.enabled }}
+{{- /*
+  Pre-install check — verifies Velero CRDs are registered before
+  creating backup resources
+  This check is skipped automatically during helm template (offline)
+  since .Capabilities returns empty without a cluster connection.
+  During helm install/upgrade on a real cluster, this correctly
+  catches missing Velero and fails with a clear message.
+*/}}
+{{- if and .Capabilities.APIVersions (.Capabilities.APIVersions.Has "velero.io/v1/Schedule") }}
+{{- /* Velero CRDs confirmed present — safe to proceed */}}
+{{- else if .Capabilities.APIVersions }}
+{{- fail "Velero is not installed on this cluster. Please install Velero before enabling backup.enabled=true. See https://velero.io/docs/latest/basic-install/" }}
+{{- end }}
+{{- end }}
