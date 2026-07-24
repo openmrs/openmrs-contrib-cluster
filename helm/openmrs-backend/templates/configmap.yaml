@@ -48,7 +48,7 @@ data:
   {{- if .Values.infinispan.clustered }}
   cache.type: "cluster"
   cache.stack: "kubernetes"
-  jgroups.dns.query: '{{ include "openmrs-backend.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local'
+  jgroups.dns.query: '{{ include "openmrs-backend.fullname" . }}-headless.{{ .Release.Namespace }}.svc.cluster.local'
   jgroups.bind.port: {{ .Values.infinispan.bind_port | quote }}
   {{- else }}
   cache.type: "local"

@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "openmrs-backend.fullname" . }}-headless
+  labels:
+    {{- include "openmrs-backend.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    {{- include "openmrs-backend.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+    {{- if .Values.infinispan.clustered }}
+    - name: infinispan-hibernate
+      port: {{ .Values.infinispan.bind_port }}
+      targetPort: {{ .Values.infinispan.bind_port }}
+      protocol: TCP
+    - name: infinispan-api
+      port: {{ add .Values.infinispan.bind_port 1 }}
+      targetPort: {{ add .Values.infinispan.bind_port 1 }}
+      protocol: TCP
+    {{- end }}
