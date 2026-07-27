@@ -87,3 +87,10 @@ Full internal cluster URL for the ECK-managed Elasticsearch HTTP service.
 {{- define "openmrs-seaweedfs.s3url" -}}
 {{- printf "http://%s-seaweedfs-s3.%s.svc.cluster.local:8333" .Release.Name .Release.Namespace }}
 {{- end }}
+
+{{/*
+Headless Service name used for JGroups DNS_PING discovery.
+*/}}
+{{- define "openmrs-backend.headlessServiceName" -}}
+{{- printf "%s-headless" (include "openmrs-backend.fullname" .) -}}
+{{- end }}
