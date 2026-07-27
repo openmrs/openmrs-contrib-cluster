@@ -104,3 +104,15 @@ jobs:
           fail_if_renders openmrs-backend.seaweedfs.s3.enableAuth=true
           fail_if_renders openmrs-backend.seaweedfs.admin.ingress.enabled=true
           fail_if_renders openmrs-backend.seaweedfs.admin.enabled=true
+
+      - name: Lint and Render Tenant Chart
+        run: |
+          TENANT_VALUES="--set tenant.name=ci \
+            --set backend.db.hostname=mariadb.example.svc.cluster.local \
+            --set backend.db.database=openmrs_ci \
+            --set backend.db.user=ci_user \
+            --set backend.db.password=ci-pass"
+          helm lint helm/openmrs-tenant $TENANT_VALUES
+          helm template helm/openmrs-tenant --generate-name $TENANT_VALUES
+          helm template helm/openmrs-tenant --generate-name $TENANT_VALUES \
+            --set backend.infinispan.clustered=true

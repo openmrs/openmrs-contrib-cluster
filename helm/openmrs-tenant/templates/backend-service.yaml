@@ -13,11 +13,11 @@ spec:
       name: http
     {{- if .Values.backend.infinispan.clustered }}
     - port: {{ .Values.backend.infinispan.bind_port }}
-      targetPort: infinispan-hibernate
+      targetPort: {{ .Values.backend.infinispan.bind_port }}
       protocol: TCP
       name: infinispan-hibernate
     - port: {{ add .Values.backend.infinispan.bind_port 1 }}
-      targetPort: infinispan-api
+      targetPort: {{ add .Values.backend.infinispan.bind_port 1 }}
       protocol: TCP
       name: infinispan-api
     {{- end }}
