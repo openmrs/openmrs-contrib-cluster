@@ -7,6 +7,11 @@ Frontend: {{ include "openmrs-tenant.frontend.fullname" . }}.{{ .Release.Namespa
 To verify the tenant label:
   kubectl get pods -n {{ .Release.Namespace }} -L app.kubernetes.io/tenant
 
-To port-forward for local access:
+To port-forward the backend API for local access:
   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "openmrs-tenant.backend.fullname" . }} 8080:{{ .Values.backend.service.port }}
+
+The frontend can be port-forwarded too, but note the SPA UI is not fully usable
+this way yet: the app shell requests its assets under SPA_PATH ({{ .Values.frontend.spaPath }}),
+which need a gateway rewrite to resolve, so they 404 over a plain port-forward
+(you get a blank page). Tenant HTTPRoute support lands under TRUNK-6654.
   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "openmrs-tenant.frontend.fullname" . }} 8081:{{ .Values.frontend.service.port }}
