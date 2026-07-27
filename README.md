@@ -145,6 +145,11 @@ helm install coast helm/openmrs-tenant \
   --set backend.db.password=CoastPass123
 ```
 
+> **Note:** Resource names (`<tenant>-backend`, `<tenant>-frontend`) derive from the
+> **release name** — the first argument to `helm install` — not from `tenant.name`.
+> `tenant.name` only sets the `app.kubernetes.io/tenant` label. Keep the release name
+> and `tenant.name` the same (as shown above) so the commands below resolve correctly.
+
 #### Verification
 
 ```bash
@@ -162,8 +167,12 @@ kubectl port-forward -n tenant-<tenant> svc/<tenant>-frontend 8081:80
 ```
 
 > **Note on routing:** Currently each tenant's backend and frontend are separate
-> services in their own namespace. You access them via `kubectl port-forward`
-> as shown above. In the future, tenant-specific Gateway API HTTPRoute resources
+> services in their own namespace. The backend API is reachable via `kubectl
+> port-forward` as shown above. The **frontend SPA UI is not fully usable over
+> port-forward yet** — the app shell requests its assets under `SPA_PATH`
+> (`/openmrs/spa`), which needs a gateway rewrite (stripping the prefix before
+> nginx) that port-forward cannot provide. In the future, tenant-specific
+> Gateway API HTTPRoute resources
 > will be added to place the frontend and backend behind the same hostname
 > (e.g. `<tenant>.example.com`) with path-based routing — `/openmrs/spa` to the
 > frontend and `/openmrs` to the backend — eliminating the need for
@@ -173,7 +182,7 @@ kubectl port-forward -n tenant-<tenant> svc/<tenant>-frontend 8081:80
 
 | Name | Description | Default |
 |------|-------------|---------|
-| `tenant.name` | Tenant identifier (used as resource prefix) | **required** |
+| `tenant.name` | Tenant identifier (sets the `app.kubernetes.io/tenant` label on every resource) | **required** |
 | `global.defaultStorageClass` | Default StorageClass for PVCs | `""` |
 | `backend.image.repository` | Backend image | `openmrs/openmrs-reference-application-3-backend` |
 | `backend.image.tag` | Backend image tag | `nightly-core-2.8` |
@@ -187,6 +196,9 @@ kubectl port-forward -n tenant-<tenant> svc/<tenant>-frontend 8081:80
 | `backend.persistence.storageClass` | Backend PVC StorageClass (defaults to `global.defaultStorageClass`) | `""` |
 | `backend.storage.type` | Storage type for patient documents | `"local"` |
 | `frontend.apiUrl` | Frontend API URL for SPA backend calls | `"http://localhost:8080/openmrs"` |
+| `frontend.spaPath` | URL path the SPA is served from (`SPA_PATH`) | `"/openmrs/spa"` |
+| `frontend.defaultLocale` | Default UI locale (`SPA_DEFAULT_LOCALE`) | `"en"` |
+| `frontend.configUrls` | Distro config JSON URLs (`SPA_CONFIG_URLS`); omitted when empty | `""` |
 | `frontend.image.repository` | Frontend image | `openmrs/openmrs-reference-application-3-frontend` |
 | `frontend.image.tag` | Frontend image tag | `nightly-core-2.8` |
 | `frontend.replicaCount` | Frontend Deployment replicas | `1` |

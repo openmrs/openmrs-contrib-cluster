@@ -43,10 +43,12 @@ spec:
               containerPort: {{ .Values.backend.service.port }}
               protocol: TCP
             {{- if .Values.backend.infinispan.clustered }}
-            - name: infinispan-hibernate
+            # Port names must be <= 15 chars (Kubernetes limit for container
+            # port names and string targetPorts), hence "ispn-" not "infinispan-".
+            - name: ispn-hibernate
               containerPort: {{ .Values.backend.infinispan.bind_port }}
               protocol: TCP
-            - name: infinispan-api
+            - name: ispn-api
               containerPort: {{ add .Values.backend.infinispan.bind_port 1 }}
               protocol: TCP
             {{- end }}

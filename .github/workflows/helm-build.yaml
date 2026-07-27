@@ -68,3 +68,15 @@ jobs:
             --set openmrs-backend.db.username=rdsuser > /tmp/external-db.yaml
           grep -q 'OMRS_DB_USERNAME: "rdsuser"' /tmp/external-db.yaml
           grep -q 'OMRS_DB_NAME: "openmrs_rds"' /tmp/external-db.yaml
+
+      - name: Lint and Render Tenant Chart
+        run: |
+          TENANT_VALUES="--set tenant.name=ci \
+            --set backend.db.hostname=mariadb.example.svc.cluster.local \
+            --set backend.db.database=openmrs_ci \
+            --set backend.db.user=ci_user \
+            --set backend.db.password=ci-pass"
+          helm lint helm/openmrs-tenant $TENANT_VALUES
+          helm template helm/openmrs-tenant --generate-name $TENANT_VALUES
+          helm template helm/openmrs-tenant --generate-name $TENANT_VALUES \
+            --set backend.infinispan.clustered=true
