@@ -1,3 +1,4 @@
+{{- if .Values.infinispan.clustered }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -11,11 +12,6 @@ spec:
   selector:
     {{- include "openmrs-backend.selectorLabels" . | nindent 4 }}
   ports:
-    - name: http
-      port: {{ .Values.service.port }}
-      targetPort: http
-      protocol: TCP
-    {{- if .Values.infinispan.clustered }}
     - name: infinispan-hibernate
       port: {{ .Values.infinispan.bind_port }}
       targetPort: {{ .Values.infinispan.bind_port }}
@@ -24,4 +20,4 @@ spec:
       port: {{ add .Values.infinispan.bind_port 1 }}
       targetPort: {{ add .Values.infinispan.bind_port 1 }}
       protocol: TCP
-    {{- end }}
+{{- end }}
