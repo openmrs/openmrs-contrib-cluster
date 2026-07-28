@@ -1,11 +1,11 @@
 Congratulations! The OpenMRS Frontend has been successfully deployed!
 
 To access the service run:
-  kubectl -n {{ .Release.Namespace }} port-forward svc/frontend 8080:80
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "openmrs-frontend.fullname" . }} 8080:{{ .Values.service.port }}
 
 NOTE: In case port-forward command does not work, make sure that OpenMRS Frontend name is correct.
       Check the services in {{ .Release.Namespace }} namespace using:
         kubectl -n {{ .Release.Namespace }} get svc
 
 The OpenMRS Frontend will be available at:
-  http://localhost:8080
+  http://localhost:8080/openmrs/spa/home

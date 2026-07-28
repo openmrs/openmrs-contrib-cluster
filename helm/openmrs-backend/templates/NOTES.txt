@@ -1,11 +1,11 @@
 Congratulations! The OpenMRS Backend has been successfully deployed!
 
 To access the service run:
-  kubectl -n {{ .Release.Namespace }} port-forward svc/backend 8080:8080
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "openmrs-backend.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
 
 NOTE: In case port-forward command does not work, make sure that OpenMRS Backend name is correct.
       Check the services in {{ .Release.Namespace }} namespace using:
         kubectl -n {{ .Release.Namespace }} get svc
 
 The OpenMRS backend will be available at:
-  http://localhost:8080
+  http://localhost:{{ .Values.service.port }}/openmrs/
