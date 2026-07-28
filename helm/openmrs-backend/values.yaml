@@ -23,6 +23,10 @@ infinispan:
 db:
   hostname: mariadb
   port: 3306
+  database: ""        # OpenMRS database name for external (bring-your-own) databases.
+                      # Empty falls back to "openmrs". Ignored when mariadb.enabled=true —
+                      # the embedded case always uses mariadb.auth.database (what the
+                      # operator creates), so connect- and create-side names cannot diverge.
   username: openmrs
   password: OpenMRS123
 
