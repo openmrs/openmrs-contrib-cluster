@@ -15,8 +15,8 @@ SKIP_OPENMRS="${SKIP_OPENMRS:-false}"
 
 KNOWN_IMAGES=(
   "mariadb:10.11"
-  "openmrs/openmrs-reference-application-3-backend:nightly-0-core-2.8"
-  "openmrs/openmrs-reference-application-3-frontend:nightly-0-core-2.8"
+  "openmrs/openmrs-reference-application-3-backend:3.7.x-no-demo"
+  "openmrs/openmrs-reference-application-3-frontend:3.7.x"
   "openmrs/openmrs-contrib-elasticsearch:8.15.3"
 )
 
