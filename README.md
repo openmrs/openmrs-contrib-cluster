@@ -185,7 +185,7 @@ kubectl port-forward -n tenant-<tenant> svc/<tenant>-frontend 8081:80
 | `tenant.name` | Tenant identifier (sets the `app.kubernetes.io/tenant` label on every resource) | **required** |
 | `global.defaultStorageClass` | Default StorageClass for PVCs | `""` |
 | `backend.image.repository` | Backend image | `openmrs/openmrs-reference-application-3-backend` |
-| `backend.image.tag` | Backend image tag | `nightly-core-2.8` |
+| `backend.image.tag` | Backend image tag | `3.7.x-no-demo` |
 | `backend.replicaCount` | Backend StatefulSet replicas | `1` |
 | `backend.db.hostname` | MariaDB hostname | **required** |
 | `backend.db.port` | MariaDB port | `3306` |
@@ -200,7 +200,7 @@ kubectl port-forward -n tenant-<tenant> svc/<tenant>-frontend 8081:80
 | `frontend.defaultLocale` | Default UI locale (`SPA_DEFAULT_LOCALE`) | `"en"` |
 | `frontend.configUrls` | Distro config JSON URLs (`SPA_CONFIG_URLS`); omitted when empty | `""` |
 | `frontend.image.repository` | Frontend image | `openmrs/openmrs-reference-application-3-frontend` |
-| `frontend.image.tag` | Frontend image tag | `nightly-core-2.8` |
+| `frontend.image.tag` | Frontend image tag | `3.7.x` |
 | `frontend.replicaCount` | Frontend Deployment replicas | `1` |
 
 > **Note on `storage.type: "local"`:** When `backend.storage.type` is `"local"` (the default),

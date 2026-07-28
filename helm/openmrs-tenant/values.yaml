@@ -13,7 +13,7 @@ backend:
 
   image:
     repository: openmrs/openmrs-reference-application-3-backend
-    tag: ""
+    tag: "3.7.x-no-demo"
     pullPolicy: IfNotPresent
 
   replicaCount: 1
@@ -107,7 +107,7 @@ frontend:
 
   image:
     repository: openmrs/openmrs-reference-application-3-frontend
-    tag: ""
+    tag: "3.7.x"
     pullPolicy: IfNotPresent
 
   replicaCount: 1

@@ -3,4 +3,4 @@ name: openmrs-tenant
 description: OpenMRS Tenant Helm chart — minimal backend+frontend for one tenant sharing existing infrastructure
 type: application
 version: 0.1.0
-appVersion: "nightly-core-2.8"
+appVersion: "3.7.x-no-demo"
