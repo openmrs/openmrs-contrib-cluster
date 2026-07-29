@@ -20,10 +20,10 @@ data:
   OMRS_DB_URL: "jdbc:mariadb://{{ .Release.Name }}-mariadb.{{ .Release.Namespace }}.svc.cluster.local:3306/{{ include "openmrs-backend.dbName" . }}?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"
   {{- end }}
   {{- else }}
-  OMRS_DB_NAME: {{ include "openmrs-backend.dbName" . | quote }}
   {{- if .Values.db.url }}
   OMRS_DB_URL: {{ .Values.db.url | quote }}
   {{- else }}
+  OMRS_DB_NAME: {{ include "openmrs-backend.dbName" . | quote }}
   OMRS_DB_HOSTNAME: {{ .Values.db.hostname | quote }}
   OMRS_DB_PORT: {{ .Values.db.port | quote }}
   {{- end }}
