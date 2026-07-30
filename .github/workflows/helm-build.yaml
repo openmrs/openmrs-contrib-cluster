@@ -59,3 +59,12 @@ jobs:
             --set openmrs-backend.monitoring.enabled=false \
             --set openmrs-backend.elasticsearch.enabled=false \
             --set openmrs-backend.seaweedfs.enabled=false
+
+      - name: Validate Rendering (external database)
+        run: |
+          helm template helm/openmrs --generate-name \
+            --set openmrs-backend.mariadb.enabled=false \
+            --set openmrs-backend.db.database=openmrs_rds \
+            --set openmrs-backend.db.username=rdsuser > /tmp/external-db.yaml
+          grep -q 'OMRS_DB_USERNAME: "rdsuser"' /tmp/external-db.yaml
+          grep -q 'OMRS_DB_NAME: "openmrs_rds"' /tmp/external-db.yaml
