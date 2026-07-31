@@ -34,6 +34,7 @@ jobs:
           helm repo add mariadb-operator https://helm.mariadb.com/mariadb-operator
           helm repo add elastic https://helm.elastic.co
           helm repo add traefik https://traefik.github.io/charts
+          helm repo add seaweedfs https://seaweedfs.github.io/seaweedfs/helm
 
       - name: Set Chart Version
         if: github.event_name == 'workflow_dispatch'
