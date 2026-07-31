@@ -33,3 +33,4 @@ dependencies:
     repository: "file://../openmrs-frontend"
     #repository: "oci://ghcr.io/openmrs"
     condition: openmrs-frontend.enabled
+  

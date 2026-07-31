@@ -1,0 +1,81 @@
+{{- if .Values.backup.enabled }}
+# Velero backup credentials secret 
+# Stores AWS credentials securely as a Kubernetes secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Release.Name }}-velero-credentials
+  namespace: {{ .Values.backup.veleroNamespace }}
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  cloud: |
+    [default]
+    aws_access_key_id={{ required "backup.credentials.accessKey is required when backup.enabled=true" .Values.backup.credentials.accessKey }}
+    aws_secret_access_key={{ required "backup.credentials.secretKey is required when backup.enabled=true" .Values.backup.credentials.secretKey }}
+---
+# Velero BackupStorageLocation — tells Velero where to store backups 
+apiVersion: velero.io/v1
+kind: BackupStorageLocation
+metadata:
+  name: {{ .Release.Name }}-backup-location
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+spec:
+  provider: aws
+  objectStorage:
+    bucket: {{ required "backup.bucket is required when backup.enabled=true" .Values.backup.bucket }}
+  config:
+    region: {{ .Values.backup.region }}
+    s3ForcePathStyle: {{ .Values.backup.s3ForcePathStyle | quote }}
+    {{- if .Values.backup.s3Url }}
+    s3Url: {{ .Values.backup.s3Url }}
+    {{- end }}
+  credential:
+    name: {{ .Release.Name }}-velero-credentials
+    key: cloud
+---
+# Velero Schedule — daily backup of this OpenMRS namespace 
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: {{ .Release.Name }}-daily-backup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  template:
+    ttl: {{ .Values.backup.ttl | quote }}
+    storageLocation: {{ .Release.Name }}-backup-location
+    includedNamespaces:
+      - {{ .Release.Namespace }}
+    hooks:
+      resources:
+        {{- if (index .Values "openmrs-backend" "elasticsearch" "enabled") }}
+        # Pre-backup hook — snapshot Elasticsearch before backup starts
+        - name: elasticsearch-backup-hook
+          includedNamespaces:
+            - {{ .Release.Namespace }}
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: elasticsearch
+          pre:
+            - exec:
+                container: elasticsearch
+                command:
+                  - /bin/sh
+                  - -c
+                  - >
+                    curl -s -X PUT "localhost:9200/_snapshot/velero"
+                    -H "Content-Type: application/json"
+                    -d '{"type":"fs","settings":{"location":"/usr/share/elasticsearch/data/snapshots"}}'
+                    &&
+                    curl -s -X PUT
+                    "localhost:9200/_snapshot/velero/snapshot_$(date +%Y%m%d%H%M)?wait_for_completion=true"
+                onError: Fail
+                timeout: 10m
+        {{- end }}
+{{- end }}
