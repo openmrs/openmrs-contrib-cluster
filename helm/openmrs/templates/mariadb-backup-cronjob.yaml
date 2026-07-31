@@ -41,8 +41,8 @@ spec:
                 - name: MARIADB_ROOT_PASSWORD
                   valueFrom:
                     secretKeyRef:
-                      name: {{ .Release.Name }}-mariadb
-                      key: mariadb-root-password
+                      name: {{ .Release.Name }}-backend-mariadb-secret
+                      key: root-password
               command:
                 - /bin/sh
                 - -c
@@ -65,16 +65,22 @@ spec:
                 - secretRef:
                     name: {{ .Release.Name }}-mariadb-backup-credentials
               command:
+                command:
                 - /bin/sh
                 - -c
                 - |
                   echo "Uploading dump to S3..."
+                  ENDPOINT_ARG=""
+                  {{- if .Values.backup.mariadbBackup.s3Endpoint }}
+                  ENDPOINT_ARG="--endpoint-url {{ .Values.backup.mariadbBackup.s3Endpoint }}"
+                  {{- end }}
+                  PATH_STYLE_ARG=""
+                  {{- if .Values.backup.mariadbBackup.s3ForcePathStyle }}
+                  PATH_STYLE_ARG="--no-sign-request"
+                  {{- end }}
                   aws s3 cp /dump/backup.sql \
                     s3://{{ required "backup.mariadbBackup.bucket is required when backup.mariadbBackup.enabled=true" .Values.backup.mariadbBackup.bucket }}/mariadb-backup-$(date +%Y%m%d%H%M).sql \
-                    --region {{ .Values.backup.mariadbBackup.region }} \
-                    {{- if .Values.backup.mariadbBackup.s3Endpoint }}
-                    --endpoint-url {{ .Values.backup.mariadbBackup.s3Endpoint }} \
-                    {{- end }}
+                    --region {{ .Values.backup.mariadbBackup.region }} $ENDPOINT_ARG $PATH_STYLE_ARG
                   echo "Upload complete."
               volumeMounts:
                 - name: dump

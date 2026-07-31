@@ -3,7 +3,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ .Release.Name }}-restore-checker
+  name: {{ .Release.Name }}-scheduled-restore
   labels:
     {{- include "openmrs.labels" . | nindent 4 }}
 rules:
@@ -18,32 +18,36 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ .Release.Name }}-restore-checker
+  name: {{ .Release.Name }}-scheduled-restore
   labels:
     {{- include "openmrs.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ .Release.Name }}-restore-checker
+  name: {{ .Release.Name }}-scheduled-restore
 subjects:
   - kind: ServiceAccount
-    name: {{ .Release.Name }}-restore-checker
+    name: {{ .Release.Name }}-scheduled-restore
     namespace: {{ .Release.Namespace }}
 ---
 # ServiceAccount — the identity that the restore checker runs 
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ .Release.Name }}-restore-checker
+  name: {{ .Release.Name }}-scheduled-restore
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "openmrs.labels" . | nindent 4 }}
 ---
-# CronJob — health check that auto-restores when OpenMRS is genuinely broken 
+# CronJob — unconditional scheduled restore from the latest Velero backup 
+# WARNING: This restores the entire namespace from the latest backup on every scheduled run.
+# It does NOT check whether the cluster is broken first.
+# Enable this only for demo environments where a daily reset to a known state is desired.
+# For production, use manual restore via Velero CLI instead.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ .Release.Name }}-restore-check
+  name: {{ .Release.Name }}-scheduled-restore
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "openmrs.labels" . | nindent 4 }}
@@ -54,10 +58,10 @@ spec:
     spec:
       template:
         spec:
-          serviceAccountName: {{ .Release.Name }}-restore-checker
+          serviceAccountName: {{ .Release.Name }}-scheduled-restore
           restartPolicy: OnFailure
           containers:
-            - name: restore-check
+            - name: scheduled-restore
               image: bitnami/kubectl:1.30-debian-12
               command:
                 - /bin/sh
