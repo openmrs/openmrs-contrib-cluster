@@ -2,6 +2,24 @@ apiVersion: v1
 entries:
   openmrs:
   - apiVersion: v2
+    appVersion: 3.7.x
+    created: "2026-07-31T11:16:43.605627389Z"
+    dependencies:
+    - name: openmrs-backend
+      repository: file://../openmrs-backend
+      version: 1.3.0
+    - condition: openmrs-frontend.enabled
+      name: openmrs-frontend
+      repository: file://../openmrs-frontend
+      version: 1.3.0
+    description: OpenMRS Helm chart for Kubernetes
+    digest: aabcd3472bd872a51a8e768e60b6ce54e99b454dee16310d0f588f6d9900f81d
+    name: openmrs
+    type: application
+    urls:
+    - https://github.com/openmrs/openmrs-contrib-cluster/releases/download/openmrs-1.3.0/openmrs-1.3.0.tgz
+    version: 1.3.0
+  - apiVersion: v2
     appVersion: nightly-0-core-2.8
     created: "2026-02-23T13:58:31.247797327Z"
     dependencies:
@@ -38,6 +56,38 @@ entries:
     - https://github.com/openmrs/openmrs-contrib-cluster/releases/download/openmrs-1.2.0/openmrs-1.2.0.tgz
     version: 1.2.0
   openmrs-backend:
+  - apiVersion: v2
+    appVersion: 3.7.x-no-demo
+    created: "2026-07-31T11:16:43.798820775Z"
+    dependencies:
+    - condition: seaweedfs.enabled
+      name: seaweedfs
+      repository: https://seaweedfs.github.io/seaweedfs/helm
+      version: 4.31.0
+    - condition: monitoring.enabled
+      name: grafana
+      repository: https://grafana.github.io/helm-charts
+      version: 10.5.15
+    - condition: monitoring.enabled
+      name: loki
+      repository: https://grafana.github.io/helm-charts
+      version: 6.53.0
+    - condition: monitoring.enabled
+      name: alloy
+      repository: https://grafana.github.io/helm-charts
+      version: 1.6.0
+    - alias: elasticsearch-eck
+      condition: elasticsearch.enabled
+      name: eck-elasticsearch
+      repository: https://helm.elastic.co
+      version: 0.19.0
+    description: OpenMRS Backend Helm chart for Kubernetes
+    digest: c4693a0644b0bb44b70b168912b605e006b502d702041981b95e69fc7cc18f12
+    name: openmrs-backend
+    type: application
+    urls:
+    - https://github.com/openmrs/openmrs-contrib-cluster/releases/download/openmrs-backend-1.3.0/openmrs-backend-1.3.0.tgz
+    version: 1.3.0
   - apiVersion: v2
     appVersion: nightly-core-2.8
     created: "2026-02-23T13:58:31.449094784Z"
@@ -120,6 +170,16 @@ entries:
     version: 1.2.0
   openmrs-frontend:
   - apiVersion: v2
+    appVersion: 3.7.x
+    created: "2026-07-31T11:16:43.924220262Z"
+    description: OpenMRS Frontend Helm chart for Kubernetes
+    digest: cc286c5e1dbc0a56cafc834d5cc077198b2b98e93dbca867ccbdc59966f5ef96
+    name: openmrs-frontend
+    type: application
+    urls:
+    - https://github.com/openmrs/openmrs-contrib-cluster/releases/download/openmrs-frontend-1.3.0/openmrs-frontend-1.3.0.tgz
+    version: 1.3.0
+  - apiVersion: v2
     appVersion: nightly-0-core-2.8
     created: "2026-02-23T13:58:31.605779468Z"
     description: OpenMRS Frontend Helm chart for Kubernetes
@@ -139,4 +199,33 @@ entries:
     urls:
     - https://github.com/openmrs/openmrs-contrib-cluster/releases/download/openmrs-frontend-1.2.0/openmrs-frontend-1.2.0.tgz
     version: 1.2.0
-generated: "2026-02-23T13:58:31.60579612Z"
+  openmrs-operator:
+  - apiVersion: v2
+    appVersion: "1.0"
+    created: "2026-07-31T11:16:44.081277388Z"
+    dependencies:
+    - condition: mariadb-operator-crds.enabled
+      name: mariadb-operator-crds
+      repository: https://helm.mariadb.com/mariadb-operator
+      version: 26.6.0
+    - condition: mariadb-operator.enabled
+      name: mariadb-operator
+      repository: https://helm.mariadb.com/mariadb-operator
+      version: 26.6.0
+    - condition: eck-operator.enabled
+      name: eck-operator
+      repository: https://helm.elastic.co
+      version: 2.16.0
+    - condition: traefik.enabled
+      name: traefik
+      repository: https://traefik.github.io/charts
+      version: 34.0.0
+    description: Cluster-level operators and infrastructure for OpenMRS (MariaDB operator,
+      ECK operator, Traefik, Gateway API)
+    digest: 6142bc9cf13a55fbd0ac486509b9329f71fa4125afd8f094212a0a5de28725fb
+    name: openmrs-operator
+    type: application
+    urls:
+    - https://github.com/openmrs/openmrs-contrib-cluster/releases/download/openmrs-operator-1.3.0/openmrs-operator-1.3.0.tgz
+    version: 1.3.0
+generated: "2026-07-31T11:16:44.081294817Z"
