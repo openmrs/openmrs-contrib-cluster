@@ -46,6 +46,7 @@ jobs:
           sed -i "s/^version: .*/version: $VERSION/" helm/openmrs-backend/Chart.yaml
           sed -i "s/^version: .*/version: $VERSION/" helm/openmrs-frontend/Chart.yaml
           sed -i "s/^version: .*/version: $VERSION/" helm/openmrs-operator/Chart.yaml
+          sed -i "s/^version: .*/version: $VERSION/" helm/openmrs-tenant/Chart.yaml
           # Update dependency versions in main chart
           sed -i "/name: openmrs-backend/,/version:/ s/version: .*/version: $VERSION/" helm/openmrs/Chart.yaml
           sed -i "/name: openmrs-frontend/,/version:/ s/version: .*/version: $VERSION/" helm/openmrs/Chart.yaml
