@@ -20,105 +20,23 @@ openmrs-backend:
       namespace: openmrs-system
   infinispan:
     clustered: true
-  monitoring:
-    enabled: true
-  grafana:
-    ingress:
-      enabled: false
-    route: {}
-    httpRoute:
-      enabled: true
-      hostnames:
-        - localhost
-      path: /grafana
-    grafana.ini:
-      server:
-        domain: localhost
-        root_url: "http://localhost:8080/grafana"
-        serve_from_sub_path: true
-      dashboards:
-        default_home_dashboard_path: /var/lib/grafana/dashboards/default/logs-dashboard.json
-  mariadb:
-    enabled: true
+  # Workload wiring only: the backend pod/secret/routes read these to enable
+  # S3 storage, the Elasticsearch volume + wait loop and the SeaweedFS admin route.
+  # The infra itself is deployed by the umbrella deps below.
   elasticsearch:
     enabled: true
-
-  elasticsearch-eck:
-    version: "8.15.3"
-    image: openmrs/openmrs-contrib-elasticsearch:8.15.3
-    nodeSets:
-      - name: default
-        count: 1
-        config:
-          node.roles:
-            - master
-            - data
-            - ingest
-          node.store.allow_mmap: false
-        
-        podTemplate:
-          spec:
-            containers:
-              - name: elasticsearch
-                resources:
-                  requests:
-                    cpu: 500m
-                    memory: "2Gi"
-                    ephemeral-storage: 2Gi
-                  limits:
-                    cpu: 750m
-                    memory: "2Gi"
-                    ephemeral-storage: 10Gi
-
   seaweedfs:
     enabled: true
-    global:
-      seaweedfs:
-        enableSecurity: false
-    master:
-      replicas: 3
-    volume:
-      enabled: true
-      replicas: 3
-      dataDirs:
-        - name: data
-          type: "persistentVolumeClaim"
-          storageClass: "standard"
-          size: "8Gi"
-          maxVolumes: 0
-    filer:
-      enabled: true
-      replicas: 3
-      extraEnvironmentVars:
-        WEED_MYSQL_ENABLED: "true"
-        WEED_MYSQL_HOSTNAME: "{{ .Release.Name }}-mariadb"
-        WEED_MYSQL_DATABASE: "openmrs"
-        WEED_MYSQL_USERNAME: "openmrs"
-        WEED_LEVELDB2_ENABLED: "false"
-      secretExtraEnvironmentVars:
-        WEED_MYSQL_PASSWORD:
-          secretKeyRef:
-            name: "openmrs-backend-mariadb-secret"
-            key: user-password
-    admin:
-      enabled: true
-      urlPrefix: /seaweedfs-admin
-      ingress:
-        enabled: false
-      httpRoute:
-        enabled: true
-      secret:
-        adminPassword: Admin123
     s3:
-      enabled: true
-      replicas: 2
-      enableAuth: true
       credentials:
         admin:
           accessKey: "openmrs"
           secretKey: "OpenMRS123"
-      createBuckets:
-        - name: openmrs
+    admin:
+      enabled: true
+      urlPrefix: /seaweedfs-admin
+      httpRoute:
+        enabled: true
 openmrs-frontend:
   gateway:
     enabled: true
@@ -130,3 +48,105 @@ openmrs-frontend:
     repository: openmrs/openmrs-reference-application-3-frontend
     tag: 3.7.x
     pullPolicy: IfNotPresent #IfNotPresent / Always
+
+# --- Infra owned by the umbrella (primary deployment) ---
+mariadb:
+  enabled: true
+
+elasticsearch:
+  enabled: true
+
+elasticsearch-eck:
+  version: "8.15.3"
+  image: openmrs/openmrs-contrib-elasticsearch:8.15.3
+  nodeSets:
+    - name: default
+      count: 1
+      config:
+        node.roles:
+          - master
+          - data
+          - ingest
+        node.store.allow_mmap: false
+
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                requests:
+                  cpu: 500m
+                  memory: "2Gi"
+                  ephemeral-storage: 2Gi
+                limits:
+                  cpu: 750m
+                  memory: "2Gi"
+                  ephemeral-storage: 10Gi
+
+seaweedfs:
+  enabled: true
+  global:
+    seaweedfs:
+      enableSecurity: false
+  master:
+    replicas: 3
+  volume:
+    enabled: true
+    replicas: 3
+    dataDirs:
+      - name: data
+        type: "persistentVolumeClaim"
+        storageClass: "standard"
+        size: "8Gi"
+        maxVolumes: 0
+  filer:
+    enabled: true
+    replicas: 3
+    extraEnvironmentVars:
+      WEED_MYSQL_ENABLED: "true"
+      WEED_MYSQL_HOSTNAME: "{{ .Release.Name }}-mariadb"
+      WEED_MYSQL_DATABASE: "openmrs"
+      WEED_MYSQL_USERNAME: "openmrs"
+      WEED_LEVELDB2_ENABLED: "false"
+    secretExtraEnvironmentVars:
+      WEED_MYSQL_PASSWORD:
+        secretKeyRef:
+          name: "openmrs-backend-mariadb-secret"
+          key: user-password
+  admin:
+    enabled: true
+    urlPrefix: /seaweedfs-admin
+    ingress:
+      enabled: false
+    secret:
+      adminPassword: Admin123
+  s3:
+    enabled: true
+    replicas: 2
+    enableAuth: true
+    credentials:
+      admin:
+        accessKey: "openmrs"
+        secretKey: "OpenMRS123"
+    createBuckets:
+      - name: openmrs
+
+monitoring:
+  enabled: true
+
+grafana:
+  ingress:
+    enabled: false
+  route: {}
+  httpRoute:
+    enabled: true
+    hostnames:
+      - localhost
+    path: /grafana
+  grafana.ini:
+    server:
+      domain: localhost
+      root_url: "http://localhost:8080/grafana"
+      serve_from_sub_path: true
+    dashboards:
+      default_home_dashboard_path: /var/lib/grafana/dashboards/default/logs-dashboard.json

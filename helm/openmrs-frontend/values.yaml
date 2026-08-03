@@ -2,7 +2,16 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+nameOverride: "frontend"
+
 enabled: true
+
+# SPA runtime configuration (rendered into the frontend ConfigMap). Defaults match
+# the primary umbrella's values; a tenant overrides per-tenant (e.g. configUrls).
+spaPath: "/openmrs/spa"
+apiUrl: "/openmrs"
+configUrls: "/openmrs/spa/config-core_demo.json"
+defaultLocale: "en"
 
 replicaCount: 2
 

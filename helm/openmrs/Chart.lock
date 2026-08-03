@@ -1,9 +1,24 @@
 dependencies:
 - name: openmrs-backend
   repository: file://../openmrs-backend
-  version: 1.3.0
+  version: 1.4.0
 - name: openmrs-frontend
   repository: file://../openmrs-frontend
-  version: 1.2.2
-digest: sha256:987afabe6b279b1a4ef89339272caad38930c7fbc2607a991032bfc163538033
-generated: "2026-06-10T16:32:01.546925672+03:00"
+  version: 1.4.0
+- name: seaweedfs
+  repository: https://seaweedfs.github.io/seaweedfs/helm
+  version: 4.31.0
+- name: grafana
+  repository: https://grafana.github.io/helm-charts
+  version: 10.5.15
+- name: loki
+  repository: https://grafana.github.io/helm-charts
+  version: 6.53.0
+- name: alloy
+  repository: https://grafana.github.io/helm-charts
+  version: 1.6.0
+- name: eck-elasticsearch
+  repository: https://helm.elastic.co
+  version: 0.19.0
+digest: sha256:c9fbd4234255772d0288b05a4eb0ccfa577a0731c8d84da6b7444df14fdb9c2c
+generated: "2026-08-03T18:50:13.54348314+03:00"

@@ -38,13 +38,6 @@ for img in "${KNOWN_IMAGES[@]}"; do
 done
 
 info "Updating Helm dependencies..."
-# Subchart dependencies must resolve before parent can bundle them
-helm dependency update "$HELM_DIR/openmrs-backend" >/tmp/backend-dep-update.log 2>&1 || {
-  warn "openmrs-backend dep update had issues:"
-  cat /tmp/backend-dep-update.log
-}
-
-# openmrs-operator dependencies (external, not affected by local template edits)
 helm dependency update "$HELM_DIR/openmrs-operator" >/tmp/operator-dep-update.log 2>&1 &
 operator_dep_pid=$!
 

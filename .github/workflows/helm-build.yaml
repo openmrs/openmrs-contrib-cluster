@@ -46,23 +46,31 @@ jobs:
         run: helm package helm/openmrs
 
       - name: Validate Rendering (default values)
-        run: helm template helm/openmrs --generate-name
+        run: |
+          helm template helm/openmrs --generate-name > /tmp/default.yaml
+          grep -q 'OMRS_DB_URL: "jdbc:mariadb:loadbalance://release-name-mariadb.default.svc.cluster.local:3306/openmrs?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"' /tmp/default.yaml
+          grep -q 'OMRS_DB_NAME: "openmrs"' /tmp/default.yaml
 
       - name: Validate Rendering (full-featured)
         run: |
           helm template helm/openmrs --generate-name \
-            --values helm/kind-openmrs.yaml
+            --values helm/kind-openmrs.yaml > /tmp/full-featured.yaml
+          grep -q 'OMRS_DB_URL: "jdbc:mariadb:loadbalance://release-name-mariadb.default.svc.cluster.local:3306/openmrs?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"' /tmp/full-featured.yaml
+          grep -q 'OMRS_DB_NAME: "openmrs"' /tmp/full-featured.yaml
 
       - name: Validate Rendering (minimal, no optional features)
         run: |
           helm template helm/openmrs --generate-name \
-            --set openmrs-backend.monitoring.enabled=false \
-            --set openmrs-backend.elasticsearch.enabled=false \
-            --set openmrs-backend.seaweedfs.enabled=false
+            --set monitoring.enabled=false \
+            --set elasticsearch.enabled=false \
+            --set seaweedfs.enabled=false > /tmp/minimal.yaml
+          grep -q 'OMRS_DB_URL: "jdbc:mariadb:loadbalance://release-name-mariadb.default.svc.cluster.local:3306/openmrs?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"' /tmp/minimal.yaml
+          grep -q 'OMRS_DB_NAME: "openmrs"' /tmp/minimal.yaml
 
       - name: Validate Rendering (external database)
         run: |
           helm template helm/openmrs --generate-name \
+            --set mariadb.enabled=false \
             --set openmrs-backend.mariadb.enabled=false \
             --set openmrs-backend.db.database=openmrs_rds \
             --set openmrs-backend.db.username=rdsuser > /tmp/external-db.yaml

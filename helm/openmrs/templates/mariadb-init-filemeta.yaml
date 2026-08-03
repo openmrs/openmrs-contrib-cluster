@@ -5,15 +5,15 @@ metadata:
   name: {{ .Release.Name }}-seaweedfs-filemeta
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "openmrs-backend.labels" . | nindent 4 }}
+    {{- include "openmrs.labels" . | nindent 4 }}
 spec:
   mariaDbRef:
     name: {{ .Release.Name }}-mariadb
-  username: {{ .Values.mariadb.auth.username | default "openmrs" | quote }}
+  username: {{ .Values.global.mariadb.auth.username | default "openmrs" | quote }}
   passwordSecretKeyRef:
-    name: {{ include "openmrs-backend.fullname" . }}-mariadb-secret
+    name: {{ include "openmrs.backendFullname" . }}-mariadb-secret
     key: user-password
-  database: {{ .Values.mariadb.auth.database | default "openmrs" | quote }}
+  database: {{ .Values.global.mariadb.auth.database | default "openmrs" | quote }}
   sql: |
     CREATE TABLE IF NOT EXISTS `filemeta` (
       `dirhash`   BIGINT NOT NULL,

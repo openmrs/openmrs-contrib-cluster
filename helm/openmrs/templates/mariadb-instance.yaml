@@ -5,18 +5,18 @@ metadata:
   name: {{ .Release.Name }}-mariadb
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "openmrs-backend.labels" . | nindent 4 }}
+    {{- include "openmrs.labels" . | nindent 4 }}
 spec:
   image: mariadb:{{ .Values.mariadb.image.tag | default "10.11" }}
 
   rootPasswordSecretKeyRef:
-    name: {{ include "openmrs-backend.fullname" . }}-mariadb-secret
+    name: {{ include "openmrs.backendFullname" . }}-mariadb-secret
     key: root-password
 
-  database: {{ .Values.mariadb.auth.database | default "openmrs" | quote }}
-  username: {{ .Values.mariadb.auth.username | default "openmrs" | quote }}
+  database: {{ .Values.global.mariadb.auth.database | default "openmrs" | quote }}
+  username: {{ .Values.global.mariadb.auth.username | default "openmrs" | quote }}
   passwordSecretKeyRef:
-    name: {{ include "openmrs-backend.fullname" . }}-mariadb-secret
+    name: {{ include "openmrs.backendFullname" . }}-mariadb-secret
     key: user-password
 
   port: 3306
