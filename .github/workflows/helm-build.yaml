@@ -70,9 +70,16 @@ jobs:
       - name: Validate Rendering (external database)
         run: |
           helm template helm/openmrs --generate-name \
-            --set mariadb.enabled=false \
-            --set openmrs-backend.mariadb.enabled=false \
+            --set global.mariadb.enabled=false \
             --set openmrs-backend.db.database=openmrs_rds \
             --set openmrs-backend.db.username=rdsuser > /tmp/external-db.yaml
           grep -q 'OMRS_DB_USERNAME: "rdsuser"' /tmp/external-db.yaml
           grep -q 'OMRS_DB_NAME: "openmrs_rds"' /tmp/external-db.yaml
+
+      - name: Validate Rendering (MariaDB replication mode)
+        run: |
+          helm template helm/openmrs --generate-name \
+            --set global.mariadb.galera=false \
+            --set global.mariadb.replicas=2 > /tmp/replication.yaml
+          grep -q 'replication:' /tmp/replication.yaml
+          grep -q 'OMRS_DB_URL: "jdbc:mariadb:replication://release-name-mariadb-primary.default.svc.cluster.local:3306,release-name-mariadb-secondary.default.svc.cluster.local:3306/openmrs?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"' /tmp/replication.yaml

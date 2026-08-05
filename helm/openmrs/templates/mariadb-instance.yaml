@@ -1,4 +1,4 @@
-{{- if .Values.mariadb.enabled }}
+{{- if .Values.global.mariadb.enabled }}
 apiVersion: k8s.mariadb.com/v1alpha1
 kind: MariaDB
 metadata:
@@ -36,20 +36,20 @@ spec:
     character_set_server=utf8mb4
     collation_server=utf8mb4_general_ci
 
-  {{- if .Values.mariadb.galera }}
+  {{- if .Values.global.mariadb.galera }}
   replicas: 3
   galera:
     enabled: true
     recovery:
       enabled: true
-  {{- else if gt (int (.Values.mariadb.replicas | default 2)) 1 }}
-  replicas: {{ .Values.mariadb.replicas }}
+  {{- else if gt (int (.Values.global.mariadb.replicas | default 2)) 1 }}
+  replicas: {{ .Values.global.mariadb.replicas }}
   replication:
     enabled: true
     primary:
       autoFailover: true
   {{- else }}
-  replicas: {{ .Values.mariadb.replicas }}
+  replicas: {{ .Values.global.mariadb.replicas }}
   {{- end }}
 
   resources:

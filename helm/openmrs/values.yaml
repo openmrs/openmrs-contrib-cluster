@@ -8,6 +8,9 @@ global:
 
   # Shared by the umbrella's MariaDB CR (below) and openmrs-backend's connection.
   mariadb:
+    enabled: true
+    galera: true
+    replicas: 2
     auth:
       database: openmrs
       username: openmrs
@@ -21,14 +24,11 @@ openmrs-backend:
     bind_port: 7800
 
   db:
-    hostname: ""       # external DB hostname; only used when mariadb.enabled=false
+    hostname: ""       # external DB hostname; only used when global.mariadb.enabled=false
     port: 3306
     database: ""       # external DB name; falls back to "openmrs"
     username: openmrs
     password: OpenMRS123
-
-  mariadb:
-    enabled: true
 
   # Workload wiring only: the backend StatefulSet/ConfigMap/Secret/Role read
   # these to enable S3 storage, Elasticsearch volumes/wait-loop and S3 creds.
@@ -53,7 +53,6 @@ openmrs-frontend:
 # consumes the shared backend/frontend charts only and has none of this.
 
 mariadb:
-  enabled: true
   image:
     repository: mariadb
     tag: "10.11"
@@ -70,8 +69,6 @@ mariadb:
       limits:
         cpu: "1"
         memory: 1Gi
-  replicas: 2
-  galera: true
 
 elasticsearch:
   enabled: false

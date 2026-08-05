@@ -50,9 +50,6 @@ openmrs-frontend:
     pullPolicy: IfNotPresent #IfNotPresent / Always
 
 # --- Infra owned by the umbrella (primary deployment) ---
-mariadb:
-  enabled: true
-
 elasticsearch:
   enabled: true
 

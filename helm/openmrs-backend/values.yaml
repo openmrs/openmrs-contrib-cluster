@@ -2,8 +2,6 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-nameOverride: "backend"
-
 global:
   defaultStorageClass: "gp2"
 
@@ -12,6 +10,9 @@ global:
 
   # Fallback for standalone rendering; a parent chart's own global.* wins over this.
   mariadb:
+    enabled: false
+    replicas: 2
+    galera: true
     auth:
       database: openmrs
       username: openmrs
@@ -33,19 +34,11 @@ db:
   hostname: mariadb
   port: 3306
   database: ""        # External DB name, falls back to "openmrs". Ignored when
-                      # mariadb.enabled=true (uses global.mariadb.auth.database instead).
+                      # global.mariadb.enabled=true (uses global.mariadb.auth.database instead).
   url: ""             # Full JDBC URL override, takes precedence over hostname/port/database.
-                      # Ignored when mariadb.enabled=true.
+                      # Ignored when global.mariadb.enabled=true.
   username: openmrs
   password: OpenMRS123
-
-# Embedded MariaDB connection. Disabled by default so a tenant uses db.* instead.
-# Credentials come from global.mariadb.auth above; the MariaDB CR itself lives
-# in the umbrella, not here.
-mariadb:
-  enabled: false
-  replicas: 2
-  galera: true
 
 elasticsearch:
   enabled: false

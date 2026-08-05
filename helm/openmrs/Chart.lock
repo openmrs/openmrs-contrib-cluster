@@ -1,10 +1,10 @@
 dependencies:
 - name: openmrs-backend
   repository: file://../openmrs-backend
-  version: 1.4.0
+  version: 2.0.0
 - name: openmrs-frontend
   repository: file://../openmrs-frontend
-  version: 1.4.0
+  version: 2.0.0
 - name: seaweedfs
   repository: https://seaweedfs.github.io/seaweedfs/helm
   version: 4.31.0
@@ -20,5 +20,5 @@ dependencies:
 - name: eck-elasticsearch
   repository: https://helm.elastic.co
   version: 0.19.0
-digest: sha256:c9fbd4234255772d0288b05a4eb0ccfa577a0731c8d84da6b7444df14fdb9c2c
-generated: "2026-08-03T18:50:13.54348314+03:00"
+digest: sha256:1cb0bc6d179b65dc2847fedb94082cfd74388613a642fbe0c1dff3d94afadd52
+generated: "2026-08-05T18:29:46.189208574+03:00"

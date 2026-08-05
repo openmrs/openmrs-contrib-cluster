@@ -104,13 +104,13 @@ To disable monitoring (Grafana, Loki, Alloy), set `monitoring.enabled=false` in 
       helm upgrade --install --create-namespace -n openmrs \
         --set global.defaultStorageClass=standard openmrs openmrs/openmrs
 
-The embedded MariaDB CR uses Galera clustering by default (`mariadb.galera: true`).
+The embedded MariaDB CR uses Galera clustering by default (`global.mariadb.galera: true`).
 To use basic primary/replica replication instead:
 
       helm upgrade --install --create-namespace -n openmrs \
         --set global.defaultStorageClass=standard \
-        --set mariadb.galera=false \
-        --set mariadb.replicas=2 openmrs openmrs/openmrs
+        --set global.mariadb.galera=false \
+        --set global.mariadb.replicas=2 openmrs openmrs/openmrs
 
 ### Kubernetes Dashboard (optional)
 
@@ -121,6 +121,30 @@ To use basic primary/replica replication instead:
       kubectl -n kubernetes-dashboard create token admin-user
       kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
       # Go to https://localhost:8443/ and login with generated token
+
+#### Migrating to 2.0.0
+
+`openmrs`/`openmrs-backend`/`openmrs-frontend` 2.0.0 relocated infra-deploy
+values out of `openmrs-backend` and into the umbrella's top level (`openmrs-backend`
+is now a workload-only chart). A values file written for 1.x will fail to render
+with an error naming the exact key that moved, rather than silently dropping it.
+
+| Old key (≤ 1.2.2) | New key (2.0.0+) |
+|---|---|
+| `openmrs-backend.monitoring.*` | `monitoring.*` |
+| `openmrs-backend.grafana.*` | `grafana.*` |
+| `openmrs-backend.loki.*` | `loki.*` |
+| `openmrs-backend.alloy.*` | `alloy.*` |
+| `openmrs-backend.elasticsearch-eck.*` | `elasticsearch-eck.*` |
+| `openmrs-backend.seaweedfs.master.*` / `.volume.*` / `.filer.*` / `.s3.enabled` / `.s3.replicas` / `.s3.enableAuth` | `seaweedfs.*` (same sub-paths, top level) |
+| `openmrs-backend.mariadb.auth.*` | `global.mariadb.auth.*` |
+| `openmrs-backend.mariadb.enabled` / `.galera` / `.replicas` | `global.mariadb.enabled` / `.galera` / `.replicas` |
+| `openmrs-backend.galera.*` | removed (was never read by any template) — use `global.mariadb.*` |
+
+Unchanged: `openmrs-backend.elasticsearch.enabled`/`.uris`/`.username`/`.password`
+and `openmrs-backend.seaweedfs.enabled`/`.s3.credentials.admin.*`/`.admin.*` are
+still workload-wiring values in the same place — they connect the workload to
+infra, they don't deploy it, and 2.0.0 didn't move them.
 
 #### Parameters
 
@@ -148,12 +172,11 @@ and a tenant chart can consume it. Infra deploy/scale settings live on the umbre
 
 | Name                                                             | Description                                                                                                            | Default Value                                             |
 |------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
-| `openmrs-backend.db.hostname`                                    | External DB hostname. Only used when `mariadb.enabled=false`                                                            | `""` |
-| `openmrs-backend.db.database`                                    | OpenMRS database name for external (bring-your-own) databases. Empty falls back to `"openmrs"`. Ignored when `mariadb.enabled=true`, where the name always comes from `mariadb.auth.database` | `""` |
-| `openmrs-backend.db.username` / `.password`                      | Credentials for an external (bring-your-own) database. Used only when `mariadb.enabled=false`                          | `"openmrs"` / `"OpenMRS123"` |
-| `openmrs-backend.db.url`                                         | Full JDBC URL override for an external database (takes precedence over `db.hostname`). Ignored when `mariadb.enabled=true` | `""` |
+| `openmrs-backend.db.hostname`                                    | External DB hostname. Only used when `global.mariadb.enabled=false`                                                     | `""` |
+| `openmrs-backend.db.database`                                    | OpenMRS database name for external (bring-your-own) databases. Empty falls back to `"openmrs"`. Ignored when `global.mariadb.enabled=true`, where the name always comes from `global.mariadb.auth.database` | `""` |
+| `openmrs-backend.db.username` / `.password`                      | Credentials for an external (bring-your-own) database. Used only when `global.mariadb.enabled=false`                   | `"openmrs"` / `"OpenMRS123"` |
+| `openmrs-backend.db.url`                                         | Full JDBC URL override for an external database (takes precedence over `db.hostname`). Ignored when `global.mariadb.enabled=true` | `""` |
 | `openmrs-backend.persistence.size`                               | Size of persistent volume to claim (for search index, attachments, etc.)                                               | `"8Gi"`                                                   |
-| `openmrs-backend.mariadb.enabled`                                | Connect to the embedded MariaDB CR deployed by the umbrella's own `mariadb.enabled` (below). A tenant leaves this `false` and uses `db.*` instead | `true` in the primary umbrella, `false` chart default |
 | `openmrs-backend.elasticsearch.enabled`                          | Wire the workload to use Elasticsearch (hibernate-search env/volumes). Does **not** deploy a cluster — see `elasticsearch.enabled` below | `false` |
 | `openmrs-backend.elasticsearch.uris` / `.username` / `.password` | External Elasticsearch connection details, used when `uris` is non-empty                                                | `""` |
 | `openmrs-backend.seaweedfs.enabled`                              | Wire the workload for S3 storage (injects S3 credentials into the Secret). Does **not** deploy SeaweedFS — see `seaweedfs.enabled` below | `false` |
@@ -169,11 +192,11 @@ exists in a tenant chart consuming the shared `openmrs-backend`/`openmrs-fronten
 
 | Name                                                        | Description                                                                                  | Default Value    |
 |--------------------------------------------------------------|------------------------------------------------------------------------------------------------|-------------------|
-| `mariadb.enabled`                                            | Deploy the embedded MariaDB CR                                                                 | `true`            |
-| `mariadb.auth.rootPassword`                                  | Password for the `root` user. Ignored if existing secret is provided. Umbrella-only — the backend workload never needs it | `"Root123"`       |
+| `global.mariadb.enabled`                                     | Deploy the embedded MariaDB CR **and** connect the backend workload to it — one flag, read by both | `true`            |
 | `global.mariadb.auth.database` / `.username` / `.password`   | Name/credentials for the OpenMRS database, read by both the MariaDB CR and the backend workload's connection — one value, not two to keep in sync | `"openmrs"` / `"openmrs"` / `"OpenMRS123"` |
+| `global.mariadb.replicas` / `.galera`                        | Replica count / Galera clustering mode — read by both the MariaDB CR and the backend's JDBC URL construction | `2` / `true`      |
+| `mariadb.auth.rootPassword`                                  | Password for the `root` user. Ignored if existing secret is provided. Umbrella-only — the backend workload never needs it | `"Root123"`       |
 | `mariadb.primary.persistence.size`                           | MariaDB primary persistent volume size                                                         | `"8Gi"`           |
-| `mariadb.replicas` / `mariadb.galera`                        | Replica count / Galera clustering mode for the MariaDB CR                                      | `2` / `true`      |
 | `elasticsearch.enabled`                                      | Deploy an ECK-managed Elasticsearch cluster                                                    | `false`           |
 | `elasticsearch-eck.*`                                        | ECK `Elasticsearch` CR spec (`nodeSets`, `podTemplate.spec.containers[].resources`, `volumeClaimTemplates`) — see the ECK docs below | see `values.yaml` |
 | `seaweedfs.enabled`                                          | Deploy SeaweedFS (master/volume/filer/S3 gateway)                                              | `false`           |

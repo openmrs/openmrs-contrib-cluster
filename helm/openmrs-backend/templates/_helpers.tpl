@@ -99,7 +99,7 @@ Headless Service name used for JGroups DNS_PING discovery.
 OpenMRS database name: global.mariadb.auth.database when embedded (matches the operator-created DB, single-sourced with whoever deploys it), else db.database; falls back to "openmrs".
 */}}
 {{- define "openmrs-backend.dbName" -}}
-{{- if .Values.mariadb.enabled -}}
+{{- if .Values.global.mariadb.enabled -}}
 {{- .Values.global.mariadb.auth.database | default "openmrs" -}}
 {{- else -}}
 {{- .Values.db.database | default "openmrs" -}}

@@ -2,8 +2,6 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-nameOverride: "frontend"
-
 enabled: true
 
 # SPA runtime configuration (rendered into the frontend ConfigMap). Defaults match
@@ -54,14 +52,14 @@ service:
 
 gateway:
   enabled: true
-  path: /openmrs/spa
+  path: ""       # defaults to spaPath if unset
   parentRefs:
     name: traefik-gateway
     namespace: openmrs-system
 
 rootRedirect:
   enabled: false
-  targetPath: /openmrs/spa/home
+  targetPath: ""  # defaults to "<spaPath>/home" if unset
   parentRefs:
     name: traefik-gateway
     namespace: openmrs-system

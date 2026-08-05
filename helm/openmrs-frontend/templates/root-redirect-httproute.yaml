@@ -25,5 +25,5 @@ spec:
             statusCode: 302
             path:
               type: ReplaceFullPath
-              replaceFullPath: {{ .Values.rootRedirect.targetPath }}
+              replaceFullPath: {{ .Values.rootRedirect.targetPath | default (printf "%s/home" .Values.spaPath) }}
 {{- end }}

@@ -1,3 +1,13 @@
+{{/* 2.0.0 moved these openmrs-backend.* keys to the umbrella top level; fail loud instead of silently dropping them. */}}
+{{- range list "monitoring" "grafana" "loki" "alloy" "elasticsearch-eck" }}
+{{- if hasKey (index $.Values "openmrs-backend") . }}
+{{- fail (printf "openmrs-backend.%s moved to the top level in 2.0.0 — see README.md for the migration table" .) }}
+{{- end }}
+{{- end }}
+{{/* mariadb.enabled/.galera/.replicas moved to global.mariadb; the rest of openmrs-backend.mariadb.* (auth.*) moved there earlier. Both silently no-op if left unmigrated, so guard the whole key. */}}
+{{- if hasKey (index $.Values "openmrs-backend") "mariadb" }}
+{{- fail "openmrs-backend.mariadb.* moved to global.mariadb.* in 2.0.0 — see README.md for the migration table" }}
+{{- end }}
 OpenMRS is ready!
 
   http://localhost:8080/openmrs/
