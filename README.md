@@ -137,14 +137,15 @@ with an error naming the exact key that moved, rather than silently dropping it.
 | `openmrs-backend.alloy.*` | `alloy.*` |
 | `openmrs-backend.elasticsearch-eck.*` | `elasticsearch-eck.*` |
 | `openmrs-backend.seaweedfs.master.*` / `.volume.*` / `.filer.*` / `.s3.enabled` / `.s3.replicas` / `.s3.enableAuth` | `seaweedfs.*` (same sub-paths, top level) |
+| `openmrs-backend.seaweedfs.admin.ingress.*` | `seaweedfs.admin.ingress.*` |
 | `openmrs-backend.mariadb.auth.*` | `global.mariadb.auth.*` |
 | `openmrs-backend.mariadb.enabled` / `.galera` / `.replicas` | `global.mariadb.enabled` / `.galera` / `.replicas` |
 | `openmrs-backend.galera.*` | removed (was never read by any template) — use `global.mariadb.*` |
+| `openmrs-backend.elasticsearch.enabled: true` (used to deploy the ECK cluster) | same path, but now **only** wires the workload — also set top-level `elasticsearch.enabled: true` to actually deploy it |
+| `openmrs-backend.seaweedfs.enabled: true` (used to deploy SeaweedFS) | same path, but now **only** wires the workload — also set top-level `seaweedfs.enabled: true` to actually deploy it |
+| `openmrs-backend.seaweedfs.admin.enabled: true` (used to deploy the Admin component) | same path, but now **only** wires the workload's own HTTPRoute — also set top-level `seaweedfs.admin.enabled: true` to actually deploy the Admin component |
 
-Unchanged: `openmrs-backend.elasticsearch.enabled`/`.uris`/`.username`/`.password`
-and `openmrs-backend.seaweedfs.enabled`/`.s3.credentials.admin.*`/`.admin.*` are
-still workload-wiring values in the same place — they connect the workload to
-infra, they don't deploy it, and 2.0.0 didn't move them.
+The last three rows are the trap in this table: the *path* didn't change, only what it does, so nothing about the key itself tells you something's different. `helm/openmrs/templates/NOTES.txt` fails the render if `openmrs-backend.elasticsearch.enabled`/`.seaweedfs.enabled`/`.seaweedfs.admin.enabled` is `true` without the matching top-level flag, specifically to catch this. `openmrs-backend.elasticsearch.uris`/`.username`/`.password` and `openmrs-backend.seaweedfs.s3.credentials.admin.*`/`.admin.httpRoute.*`/`.admin.urlPrefix` are genuinely unaffected — those only ever wired the workload, never deployed anything.
 
 #### Parameters
 
@@ -156,7 +157,7 @@ infra, they don't deploy it, and 2.0.0 didn't move them.
 
 #### Common parameters
 
-Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `traefik-gateway`, `openmrs-backend.mariadb`.
+Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `traefik-gateway`, `mariadb`.
 
 | Name                | Description                  | Default Value                                            |
 |---------------------|------------------------------|----------------------------------------------------------|

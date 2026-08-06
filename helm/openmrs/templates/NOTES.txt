@@ -8,6 +8,33 @@
 {{- if hasKey (index $.Values "openmrs-backend") "mariadb" }}
 {{- fail "openmrs-backend.mariadb.* moved to global.mariadb.* in 2.0.0 — see README.md for the migration table" }}
 {{- end }}
+{{/* elasticsearch.enabled/seaweedfs.enabled kept their openmrs-backend.* path but only wire the workload in 2.0.0 — deploying the actual infra now needs the matching top-level flag too, or the workload points at nothing. */}}
+{{- $backend := index $.Values "openmrs-backend" }}
+{{- if and $backend.elasticsearch.enabled (not $.Values.elasticsearch.enabled) }}
+{{- fail "openmrs-backend.elasticsearch.enabled only wires the workload in 2.0.0; set elasticsearch.enabled=true to deploy the ECK cluster, see README.md" }}
+{{- end }}
+{{- if and $backend.seaweedfs.enabled (not $.Values.seaweedfs.enabled) }}
+{{- fail "openmrs-backend.seaweedfs.enabled only wires the workload in 2.0.0; set seaweedfs.enabled=true to deploy SeaweedFS, see README.md" }}
+{{- end }}
+{{/* master/volume/filer and s3.enabled/.replicas/.enableAuth moved to the umbrella top level in 2.0.0; openmrs-backend.seaweedfs still has live keys (enabled, s3.credentials.admin, admin) so guard the specific dead sub-keys rather than the whole key. */}}
+{{- $sw := $backend.seaweedfs }}
+{{- range list "master" "volume" "filer" }}
+{{- if hasKey $sw . }}
+{{- fail (printf "openmrs-backend.seaweedfs.%s moved to the umbrella top level in 2.0.0 — see README.md for the migration table" .) }}
+{{- end }}
+{{- end }}
+{{- range list "enabled" "replicas" "enableAuth" }}
+{{- if hasKey $sw.s3 . }}
+{{- fail (printf "openmrs-backend.seaweedfs.s3.%s moved to the umbrella top-level seaweedfs.s3.%s in 2.0.0 — see README.md for the migration table" . .) }}
+{{- end }}
+{{- end }}
+{{/* admin.ingress moved to the umbrella top level; admin.enabled kept its path but only wires the workload's own HTTPRoute now, same trap as elasticsearch/seaweedfs.enabled above. */}}
+{{- if hasKey $sw.admin "ingress" }}
+{{- fail "openmrs-backend.seaweedfs.admin.ingress moved to the umbrella top-level seaweedfs.admin.ingress in 2.0.0 — see README.md for the migration table" }}
+{{- end }}
+{{- if and $sw.admin.enabled (not $.Values.seaweedfs.admin.enabled) }}
+{{- fail "openmrs-backend.seaweedfs.admin.enabled only wires the workload's own route in 2.0.0; set seaweedfs.admin.enabled=true to deploy the SeaweedFS Admin component, see README.md" }}
+{{- end }}
 OpenMRS is ready!
 
   http://localhost:8080/openmrs/
