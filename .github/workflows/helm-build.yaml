@@ -46,25 +46,61 @@ jobs:
         run: helm package helm/openmrs
 
       - name: Validate Rendering (default values)
-        run: helm template helm/openmrs --generate-name
+        run: |
+          helm template helm/openmrs --generate-name > /tmp/default.yaml
+          grep -q 'OMRS_DB_URL: "jdbc:mariadb:loadbalance://release-name-mariadb.default.svc.cluster.local:3306/openmrs?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"' /tmp/default.yaml
+          grep -q 'OMRS_DB_NAME: "openmrs"' /tmp/default.yaml
 
       - name: Validate Rendering (full-featured)
         run: |
           helm template helm/openmrs --generate-name \
-            --values helm/kind-openmrs.yaml
+            --values helm/kind-openmrs.yaml > /tmp/full-featured.yaml
+          grep -q 'OMRS_DB_URL: "jdbc:mariadb:loadbalance://release-name-mariadb.default.svc.cluster.local:3306/openmrs?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"' /tmp/full-featured.yaml
+          grep -q 'OMRS_DB_NAME: "openmrs"' /tmp/full-featured.yaml
 
       - name: Validate Rendering (minimal, no optional features)
         run: |
           helm template helm/openmrs --generate-name \
-            --set openmrs-backend.monitoring.enabled=false \
-            --set openmrs-backend.elasticsearch.enabled=false \
-            --set openmrs-backend.seaweedfs.enabled=false
+            --set monitoring.enabled=false \
+            --set elasticsearch.enabled=false \
+            --set seaweedfs.enabled=false > /tmp/minimal.yaml
+          grep -q 'OMRS_DB_URL: "jdbc:mariadb:loadbalance://release-name-mariadb.default.svc.cluster.local:3306/openmrs?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"' /tmp/minimal.yaml
+          grep -q 'OMRS_DB_NAME: "openmrs"' /tmp/minimal.yaml
 
       - name: Validate Rendering (external database)
         run: |
           helm template helm/openmrs --generate-name \
-            --set openmrs-backend.mariadb.enabled=false \
+            --set global.mariadb.enabled=false \
             --set openmrs-backend.db.database=openmrs_rds \
             --set openmrs-backend.db.username=rdsuser > /tmp/external-db.yaml
           grep -q 'OMRS_DB_USERNAME: "rdsuser"' /tmp/external-db.yaml
           grep -q 'OMRS_DB_NAME: "openmrs_rds"' /tmp/external-db.yaml
+
+      - name: Validate Rendering (MariaDB replication mode)
+        run: |
+          helm template helm/openmrs --generate-name \
+            --set global.mariadb.galera=false \
+            --set global.mariadb.replicas=2 > /tmp/replication.yaml
+          grep -q 'replication:' /tmp/replication.yaml
+          grep -q 'OMRS_DB_URL: "jdbc:mariadb:replication://release-name-mariadb-primary.default.svc.cluster.local:3306,release-name-mariadb-secondary.default.svc.cluster.local:3306/openmrs?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"' /tmp/replication.yaml
+
+      - name: Validate 1.x values are rejected
+        run: |
+          fail_if_renders() {
+            if helm template helm/openmrs --generate-name --set "$1" >/dev/null 2>&1; then
+              echo "expected the 2.0.0 guard to reject $1"
+              exit 1
+            fi
+          }
+          fail_if_renders openmrs-backend.monitoring.enabled=true
+          fail_if_renders openmrs-backend.mariadb.auth.password=x
+          fail_if_renders openmrs-backend.elasticsearch.enabled=true
+          fail_if_renders openmrs-backend.seaweedfs.enabled=true
+          fail_if_renders openmrs-backend.seaweedfs.master.replicas=7
+          fail_if_renders openmrs-backend.seaweedfs.volume.replicas=7
+          fail_if_renders openmrs-backend.seaweedfs.filer.replicas=7
+          fail_if_renders openmrs-backend.seaweedfs.s3.enabled=true
+          fail_if_renders openmrs-backend.seaweedfs.s3.replicas=99
+          fail_if_renders openmrs-backend.seaweedfs.s3.enableAuth=true
+          fail_if_renders openmrs-backend.seaweedfs.admin.ingress.enabled=true
+          fail_if_renders openmrs-backend.seaweedfs.admin.enabled=true

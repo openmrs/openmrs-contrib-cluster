@@ -5,7 +5,7 @@ metadata:
   name: {{ .Release.Name }}-grafana
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "openmrs-backend.labels" . | nindent 4 }}
+    {{- include "openmrs.labels" . | nindent 4 }}
 spec:
   parentRefs:
     - name: {{ .Values.grafana.httpRoute.parentRefs.name }}

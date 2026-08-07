@@ -5,7 +5,7 @@ metadata:
   name: logs-dashboard
   labels:
     grafana_dashboard: "1"
-    {{- include "openmrs-backend.labels" . | nindent 4 }}
+    {{- include "openmrs.labels" . | nindent 4 }}
 data:
   logs-dashboard.json: |
 {{ .Files.Get "dashboards/logs-dashboard.json" | indent 4 }}

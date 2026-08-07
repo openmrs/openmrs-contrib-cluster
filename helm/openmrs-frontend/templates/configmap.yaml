@@ -5,7 +5,7 @@ metadata:
   labels:
     {{- include "openmrs-frontend.labels" . | nindent 4 }}
 data:
-  SPA_PATH: "/openmrs/spa"
-  API_URL: "/openmrs"
-  SPA_CONFIG_URLS: "/openmrs/spa/config-core_demo.json"
-  SPA_DEFAULT_LOCALE: "en"
+  SPA_PATH: {{ .Values.spaPath | quote }}
+  API_URL: {{ .Values.apiUrl | quote }}
+  SPA_CONFIG_URLS: {{ .Values.configUrls | quote }}
+  SPA_DEFAULT_LOCALE: {{ .Values.defaultLocale | quote }}

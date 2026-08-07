@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Chart version (e.g. 1.2.1)"
+        description: "openmrs (umbrella) + openmrs-operator chart version (e.g. 1.2.1). openmrs-backend/openmrs-frontend are versioned independently — bump their Chart.yaml (and the umbrella's dependency pin) in a regular commit first."
         required: true
 
 jobs:
@@ -41,19 +41,14 @@ jobs:
         env:
           VERSION: ${{ github.event.inputs.version }}
         run: |
-          # Update version in Chart.yaml files
+          # openmrs-backend/openmrs-frontend version independently — bump them by
+          # hand in a regular commit, not here. `helm dependency update` fails
+          # loudly if their Chart.yaml drifts from the pin below.
           sed -i "s/^version: .*/version: $VERSION/" helm/openmrs/Chart.yaml
-          sed -i "s/^version: .*/version: $VERSION/" helm/openmrs-backend/Chart.yaml
-          sed -i "s/^version: .*/version: $VERSION/" helm/openmrs-frontend/Chart.yaml
           sed -i "s/^version: .*/version: $VERSION/" helm/openmrs-operator/Chart.yaml
-          # Update dependency versions in main chart
-          sed -i "/name: openmrs-backend/,/version:/ s/version: .*/version: $VERSION/" helm/openmrs/Chart.yaml
-          sed -i "/name: openmrs-frontend/,/version:/ s/version: .*/version: $VERSION/" helm/openmrs/Chart.yaml
 
       - name: Build dependencies
         run: |
-          helm dependency update helm/openmrs-backend
-          helm dependency update helm/openmrs-frontend
           helm dependency update helm/openmrs
           helm dependency update helm/openmrs-operator
 
