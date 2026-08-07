@@ -427,14 +427,20 @@ dependencies and run helm upgrade.
 
 ### Releasing from Github Actions
 
-1. Go to the "Actions" tab in the GitHub repository.
-2. Select the "Release Charts" workflow from the left sidebar.
-3. Click the "Run workflow" dropdown button.
-4. Enter the desired version (e.g., `1.2.2`) in the "Chart version" input field.
-5. Click the green "Run workflow" button.
+1. Bump `openmrs-backend`/`openmrs-frontend` `Chart.yaml` (and the umbrella's dependency
+   pin on them in `helm/openmrs/Chart.yaml`) in a regular commit first — the workflow
+   below doesn't touch these two, they version independently of the umbrella.
+2. Go to the "Actions" tab in the GitHub repository.
+3. Select the "Release Charts" workflow from the left sidebar.
+4. Click the "Run workflow" dropdown button.
+5. Enter the desired umbrella version (e.g., `2.0.0`) in the "version" input field.
+   `openmrs-operator` versions independently and is left untouched unless you also
+   fill in "operator_version" — leave it blank to skip releasing it this round.
+6. Click the green "Run workflow" button.
 
 This will:
-- Update the version in `Chart.yaml` files.
+- Update the version in `helm/openmrs/Chart.yaml` (and `helm/openmrs-operator/Chart.yaml`
+  if `operator_version` was set).
 - Commit and push the changes.
 - Create a git tag.
 - Package and release the charts to GitHub Pages.
