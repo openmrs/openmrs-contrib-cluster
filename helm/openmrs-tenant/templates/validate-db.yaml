@@ -1,0 +1,12 @@
+{{- /*
+Fail fast if the tenant's shared-MariaDB connection isn't fully set. Left empty,
+the shared backend falls back to its own defaults (host "mariadb", db "openmrs"
+— the primary's) with blank creds, renders clean, then fails at runtime.
+*/}}
+{{- if not .Values.global.tenant.name -}}
+{{- fail "openmrs-tenant: global.tenant.name is required." -}}
+{{- end -}}
+{{- $db := (index .Values "openmrs-backend").db | default dict -}}
+{{- if or (not $db.url) (not $db.hostname) (not $db.username) (not $db.password) -}}
+{{- fail "openmrs-tenant: openmrs-backend.db.url, .hostname, .username and .password are all required. See the README's \"Deploy additional tenants\" section." -}}
+{{- end -}}

@@ -35,7 +35,9 @@ db:
   port: 3306
   database: ""        # External DB name, falls back to "openmrs". Ignored when
                       # global.mariadb.enabled=true (uses global.mariadb.auth.database instead).
-  url: ""             # Full JDBC URL override, takes precedence over hostname/port/database.
+  url: ""             # Full JDBC URL for an external database. Requires db.hostname
+                      # alongside it (the image's startup preflight gates on
+                      # OMRS_DB_HOSTNAME:OMRS_DB_PORT); db.database is ignored.
                       # Ignored when global.mariadb.enabled=true.
   username: openmrs
   password: OpenMRS123
