@@ -22,6 +22,13 @@ data:
   {{- else }}
   {{- if .Values.db.url }}
   OMRS_DB_URL: {{ .Values.db.url | quote }}
+  {{- if regexMatch "^jdbc:mariadb" .Values.db.url }}
+  OMRS_DB: "mariadb"
+  {{- end }}
+  OMRS_DB_HOSTNAME: {{ required "openmrs-backend: db.hostname is required alongside db.url, since the image's startup preflight gates on OMRS_DB_HOSTNAME:OMRS_DB_PORT and falls back to localhost:3306" .Values.db.hostname | quote }}
+  {{- if .Values.db.port }}
+  OMRS_DB_PORT: {{ .Values.db.port | quote }}
+  {{- end }}
   {{- else }}
   OMRS_DB_NAME: {{ include "openmrs-backend.dbName" . | quote }}
   OMRS_DB_HOSTNAME: {{ .Values.db.hostname | quote }}

@@ -1,0 +1,53 @@
+# Default values for openmrs-tenant.
+# A thin chart: the backend and frontend workloads come from the shared
+# openmrs-backend/openmrs-frontend charts, consumed as dependencies.
+# This chart only supplies the per-tenant configuration surface on top of them.
+
+global:
+  defaultStorageClass: ""
+  tenant:
+    name: ""
+    hostname: ""
+  mariadb:
+    enabled: false
+
+openmrs-backend:
+  # Off until routing is wired in: the shared chart's route has no hostname and
+  # would collide on the shared gateway.
+  gateway:
+    enabled: false
+
+  # A tenant shares the primary cluster's MariaDB — external DB only, no
+  # bundled MariaDB.
+  db:
+    url: ""        # full JDBC URL to the shared MariaDB, e.g.
+                   # "jdbc:mariadb:loadbalance://mariadb:3306/<tenantdb>?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"
+    # hostname/port feed the backend image's wait-for-it preflight (it gates on
+    # OMRS_DB_HOSTNAME:OMRS_DB_PORT, defaulting to localhost:3306), so they must
+    # point at the same shared MariaDB the JDBC URL connects to.
+    hostname: ""   # e.g. <primary-release>-mariadb.<primary-namespace>.svc.cluster.local
+    port: 3306
+    username: ""
+    password: ""
+
+  podLabels: {}
+
+openmrs-frontend:
+  enabled: true
+  # Off until routing is wired in
+  gateway:
+    enabled: false
+
+  # Per-tenant SPA configuration. spaPath drives the ConfigMap, the route
+  # match, and the root-redirect target, so a per-tenant path override stays
+  # consistent end to end.
+  spaPath: "/openmrs/spa"
+  apiUrl: "/openmrs"
+  defaultLocale: "en"
+  # Empty = no SPA_CONFIG_URLS config file. A tenant that needs a per-tenant
+  # config file sets this.
+  configUrls: ""
+
+  replicaCount: 1
+
+  podLabels: {}

@@ -21,6 +21,9 @@ spec:
         {{- end }}
       labels:
         {{- include "openmrs-backend.labels" . | nindent 8 }}
+        {{- with (dig "tenant" "name" "" (default dict .Values.global)) }}
+        app.kubernetes.io/tenant: {{ . | quote }}
+        {{- end }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -141,7 +144,9 @@ spec:
         name: data
       spec:
         accessModes: [ "ReadWriteOnce" ]
-        storageClassName: {{ .Values.global.defaultStorageClass | quote }}
+        {{- with .Values.global.defaultStorageClass }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
         resources:
           requests:
             storage: {{ .Values.persistence.size | quote }}

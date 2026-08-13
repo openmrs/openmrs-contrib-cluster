@@ -98,6 +98,132 @@ To disable monitoring (Grafana, Loki, Alloy), set `monitoring.enabled=false` in 
 | `SKIP_OPERATORS=true` | `false` | Skip `openmrs-operator` chart install |
 | `SKIP_OPENMRS=true` | `false` | Skip OpenMRS deployment (exit after step 3) |
 
+### 6. Deploy additional tenants (multi-tenancy)
+
+The `helm/openmrs-tenant` chart deploys an isolated OpenMRS tenant (backend + frontend)
+that shares the primary cluster's MariaDB. It is a **thin umbrella**: the backend and
+frontend workloads come from the shared `openmrs-backend` / `openmrs-frontend` charts
+(consumed as dependencies), and the tenant chart only supplies the per-tenant
+configuration on top of them. Each tenant is a separate Helm release in its own namespace.
+
+#### Prerequisites
+
+- Primary OpenMRS stack deployed and running (steps 1–4 above)
+- MariaDB accessible from tenant namespace (default DNS: `<primary-release>-mariadb.<primary-namespace>.svc.cluster.local`, e.g. `openmrs-mariadb.openmrs.svc.cluster.local`)
+- A database and user created for the tenant:
+
+```bash
+kubectl exec -n openmrs svc/openmrs-mariadb -- mysql -u root -pRoot123 -e "
+  CREATE DATABASE IF NOT EXISTS openmrs_<tenant> CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+  CREATE USER IF NOT EXISTS '<tenant>_user'@'%' IDENTIFIED BY '<password>';
+  GRANT ALL PRIVILEGES ON openmrs_<tenant>.* TO '<tenant>_user'@'%';
+  FLUSH PRIVILEGES;
+"
+```
+
+#### Install a tenant
+
+A tenant connects to the shared MariaDB via a full JDBC URL
+(`openmrs-backend.db.url`). `db.hostname` (and `db.port`) must point at the same
+MariaDB — the backend image's `wait-for-it` preflight gates on
+`OMRS_DB_HOSTNAME:OMRS_DB_PORT` (defaulting to `localhost:3306`, which never
+resolves), so the JDBC URL alone is not enough. Vendor the shared charts once,
+then install:
+
+```bash
+helm dependency update helm/openmrs-tenant   # once — vendors openmrs-backend/openmrs-frontend
+
+helm install <tenant> helm/openmrs-tenant \
+  -n tenant-<tenant> --create-namespace \
+  --set global.tenant.name=<tenant> \
+  --set global.defaultStorageClass=standard \
+  --set openmrs-backend.db.url="jdbc:mariadb:loadbalance://<primary-release>-mariadb.<primary-namespace>.svc.cluster.local:3306/openmrs_<tenant>?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true" \
+  --set openmrs-backend.db.hostname=<primary-release>-mariadb.<primary-namespace>.svc.cluster.local \
+  --set openmrs-backend.db.port=3306 \
+  --set openmrs-backend.db.username=<tenant>_user \
+  --set openmrs-backend.db.password=<password>
+```
+
+Example for a tenant named `coast`:
+
+```bash
+helm install coast helm/openmrs-tenant \
+  -n tenant-coast --create-namespace \
+  --set global.tenant.name=coast \
+  --set global.defaultStorageClass=standard \
+  --set openmrs-backend.db.url="jdbc:mariadb:loadbalance://openmrs-mariadb.openmrs.svc.cluster.local:3306/openmrs_coast?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true" \
+  --set openmrs-backend.db.hostname=openmrs-mariadb.openmrs.svc.cluster.local \
+  --set openmrs-backend.db.port=3306 \
+  --set openmrs-backend.db.username=coast_user \
+  --set openmrs-backend.db.password=CoastPass123
+```
+
+> **Naming:** resources are named from the **release name** (the first argument to
+> `helm install`) by the shared charts, e.g. release `coast` → `coast-openmrs-backend` /
+> `coast-openmrs-frontend`.
+>
+> **Tenant label:** `global.tenant.name` sets the `app.kubernetes.io/tenant` label on
+> the backend and frontend **pods** (it propagates into the shared charts as a global).
+> It does **not** land on Services/ConfigMaps — labelling every resource per tenant
+> would need a `commonLabels` hook on the shared charts (planned).
+
+#### Verification
+
+```bash
+# Check pods with tenant label
+kubectl get pods -n tenant-<tenant> -L app.kubernetes.io/tenant
+
+# Wait for ready
+kubectl wait --for=condition=ready pod -n tenant-<tenant> --all --timeout=600s
+
+# Port-forward to backend (API)
+kubectl port-forward -n tenant-<tenant> svc/<tenant>-openmrs-backend 8080:8080
+
+# Port-forward to frontend (SPA)
+kubectl port-forward -n tenant-<tenant> svc/<tenant>-openmrs-frontend 8081:80
+```
+
+> **Note on routing:** tenant HTTPRoutes are disabled in this chart
+> (`openmrs-backend.gateway.enabled` and `openmrs-frontend.gateway.enabled` default to
+> `false`) — per-tenant routing is deferred to a later phase (TRUNK-6654), since the
+> shared charts' routes carry no hostname and would collide on the shared gateway.
+> Reach the backend API via `kubectl port-forward` as shown. The **frontend SPA UI is
+> not fully usable over port-forward** — the app shell requests its assets under
+> `SPA_PATH` (`/openmrs/spa`), which needs a gateway rewrite (stripping the prefix
+> before nginx) that port-forward cannot provide. Once tenant routing lands, each
+> tenant's frontend and backend will sit behind a per-tenant hostname
+> (e.g. `<tenant>.example.com`), like the primary OpenMRS stack.
+
+#### Tenant chart parameters
+
+The tenant chart's own values, plus the most common shared-chart overrides it passes
+through. For the full shared-chart surface, see `helm/openmrs-backend/values.yaml` and
+`helm/openmrs-frontend/values.yaml`.
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `global.tenant.name` | Tenant identifier; sets the `app.kubernetes.io/tenant` label on backend/frontend pods | **required** |
+| `global.tenant.hostname` | Per-tenant hostname, reserved for future routing | `""` |
+| `global.defaultStorageClass` | StorageClass for tenant PVCs (overrides the shared chart default) | `""` |
+| `openmrs-backend.db.url` | Full JDBC URL to the shared MariaDB | **required** |
+| `openmrs-backend.db.hostname` | Shared MariaDB host, used by the backend's `wait-for-it` preflight (`OMRS_DB_HOSTNAME`) | **required** |
+| `openmrs-backend.db.port` | Shared MariaDB port | `3306` |
+| `openmrs-backend.db.username` | Tenant DB user | **required** |
+| `openmrs-backend.db.password` | Tenant DB password | **required** |
+| `openmrs-backend.podLabels` | Extra labels for backend pods | `{}` |
+| `openmrs-frontend.enabled` | Deploy the frontend | `true` |
+| `openmrs-frontend.spaPath` | URL path the SPA is served from (`SPA_PATH`) | `"/openmrs/spa"` |
+| `openmrs-frontend.apiUrl` | SPA → backend API URL (`API_URL`) | `"/openmrs"` |
+| `openmrs-frontend.defaultLocale` | Default UI locale (`SPA_DEFAULT_LOCALE`) | `"en"` |
+| `openmrs-frontend.configUrls` | Distro config JSON URLs (`SPA_CONFIG_URLS`); omitted when empty | `""` |
+| `openmrs-frontend.replicaCount` | Frontend replicas | `1` |
+| `openmrs-frontend.podLabels` | Extra labels for frontend pods | `{}` |
+
+Images and versions are inherited from the shared charts (backend `3.7.x-no-demo`,
+frontend `3.7.x`); override via `openmrs-backend.image.*` / `openmrs-frontend.image.*`
+if needed. Clustering, autoscaling, and shared storage are shared-chart features and
+are covered in later phases.
+
 ### Alternative: install from Helm registry
 
       helm repo add openmrs https://openmrs.github.io/openmrs-contrib-cluster/
@@ -176,7 +302,7 @@ and a tenant chart can consume it. Infra deploy/scale settings live on the umbre
 | `openmrs-backend.db.hostname`                                    | External DB hostname. Only used when `global.mariadb.enabled=false`                                                     | `""` |
 | `openmrs-backend.db.database`                                    | OpenMRS database name for external (bring-your-own) databases. Empty falls back to `"openmrs"`. Ignored when `global.mariadb.enabled=true`, where the name always comes from `global.mariadb.auth.database` | `""` |
 | `openmrs-backend.db.username` / `.password`                      | Credentials for an external (bring-your-own) database. Used only when `global.mariadb.enabled=false`                   | `"openmrs"` / `"OpenMRS123"` |
-| `openmrs-backend.db.url`                                         | Full JDBC URL override for an external database (takes precedence over `db.hostname`). Ignored when `global.mariadb.enabled=true` | `""` |
+| `openmrs-backend.db.url`                                         | Full JDBC URL for an external database. **Requires `db.hostname` set too** — the URL is the JDBC connection, `db.hostname` feeds the image's startup preflight (which otherwise falls back to `localhost`). Ignored when `global.mariadb.enabled=true` | `""` |
 | `openmrs-backend.persistence.size`                               | Size of persistent volume to claim (for search index, attachments, etc.)                                               | `"8Gi"`                                                   |
 | `openmrs-backend.elasticsearch.enabled`                          | Wire the workload to use Elasticsearch (hibernate-search env/volumes). Does **not** deploy a cluster — see `elasticsearch.enabled` below | `false` |
 | `openmrs-backend.elasticsearch.uris` / `.username` / `.password` | External Elasticsearch connection details, used when `uris` is non-empty                                                | `""` |
@@ -427,9 +553,10 @@ dependencies and run helm upgrade.
 
 ### Releasing from Github Actions
 
-1. Bump `openmrs-backend`/`openmrs-frontend` `Chart.yaml` (and the umbrella's dependency
-   pin on them in `helm/openmrs/Chart.yaml`) in a regular commit first — the workflow
-   below doesn't touch these two, they version independently of the umbrella.
+1. Bump `openmrs-backend`/`openmrs-frontend`/`openmrs-tenant` `Chart.yaml` (and the
+   dependency pins on backend/frontend in **both** `helm/openmrs/Chart.yaml` and
+   `helm/openmrs-tenant/Chart.yaml`) in a regular commit first — the workflow below
+   doesn't touch these charts, they version independently of the umbrella.
 2. Go to the "Actions" tab in the GitHub repository.
 3. Select the "Release Charts" workflow from the left sidebar.
 4. Click the "Run workflow" dropdown button.
