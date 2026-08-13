@@ -96,11 +96,11 @@ Headless Service name used for JGroups DNS_PING discovery.
 {{- end }}
 
 {{/*
-OpenMRS database name: mariadb.auth.database when embedded (matches the operator-created DB), else db.database; falls back to "openmrs".
+OpenMRS database name: global.mariadb.auth.database when embedded (matches the operator-created DB, single-sourced with whoever deploys it), else db.database; falls back to "openmrs".
 */}}
 {{- define "openmrs-backend.dbName" -}}
-{{- if .Values.mariadb.enabled -}}
-{{- .Values.mariadb.auth.database | default "openmrs" -}}
+{{- if .Values.global.mariadb.enabled -}}
+{{- .Values.global.mariadb.auth.database | default "openmrs" -}}
 {{- else -}}
 {{- .Values.db.database | default "openmrs" -}}
 {{- end -}}

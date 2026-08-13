@@ -14,7 +14,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: {{ .Values.gateway.path | default "/openmrs/spa" }}
+            value: {{ .Values.gateway.path | default .Values.spaPath }}
       filters:
         - type: URLRewrite
           urlRewrite:

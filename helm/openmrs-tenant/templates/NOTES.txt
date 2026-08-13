@@ -1,0 +1,17 @@
+Congratulations! The OpenMRS Tenant has been successfully deployed!
+
+Tenant: {{ .Values.global.tenant.name }}
+Backend: {{ .Release.Name }}-openmrs-backend.{{ .Release.Namespace }}.svc.cluster.local:8080
+Frontend: {{ .Release.Name }}-openmrs-frontend.{{ .Release.Namespace }}.svc.cluster.local:80
+
+To verify the tenant label:
+  kubectl get pods -n {{ .Release.Namespace }} -L app.kubernetes.io/tenant
+
+To port-forward the backend API for local access:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-openmrs-backend 8080:8080
+
+The frontend can be port-forwarded too, but note the SPA UI is not fully usable
+this way yet: the app shell requests its assets under SPA_PATH ({{ (index .Values "openmrs-frontend").spaPath }}),
+which need a gateway rewrite to resolve, so they 404 over a plain port-forward
+(you get a blank page). Tenant HTTPRoute support lands under TRUNK-6654.
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-openmrs-frontend 8081:80

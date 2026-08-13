@@ -8,6 +8,16 @@ global:
   security:
     allowInsecureImages: true
 
+  # Fallback for standalone rendering; a parent chart's own global.* wins over this.
+  mariadb:
+    enabled: false
+    replicas: 2
+    galera: true
+    auth:
+      database: openmrs
+      username: openmrs
+      password: OpenMRS123
+
 replicaCount: 1
 
 image:
@@ -23,125 +33,21 @@ infinispan:
 db:
   hostname: mariadb
   port: 3306
-  database: ""        # OpenMRS database name for external (bring-your-own) databases.
-                      # Empty falls back to "openmrs". Ignored when mariadb.enabled=true —
-                      # the embedded case always uses mariadb.auth.database (what the
-                      # operator creates), so connect- and create-side names cannot diverge.
+  database: ""        # External DB name, falls back to "openmrs". Ignored when
+                      # global.mariadb.enabled=true (uses global.mariadb.auth.database instead).
+  url: ""             # Full JDBC URL for an external database. Requires db.hostname
+                      # alongside it (the image's startup preflight gates on
+                      # OMRS_DB_HOSTNAME:OMRS_DB_PORT); db.database is ignored.
+                      # Ignored when global.mariadb.enabled=true.
   username: openmrs
   password: OpenMRS123
 
-mariadb:
-  image:
-    repository: mariadb
-    tag: "10.11"
-  auth:
-    rootPassword: Root123
-    database: openmrs
-    username: openmrs
-    password: OpenMRS123
-  primary:
-    persistence:
-      enabled: true
-      size: 8Gi
-    resources:
-      requests:
-        cpu: 500m
-        memory: 512Mi
-      limits:
-        cpu: "1"
-        memory: 1Gi
-  enabled: false
-  replicas: 2
-  galera: true
-
 elasticsearch:
   enabled: false
-
-elasticsearch-eck:
-  version: "8.15.3"
-  image: openmrs/openmrs-contrib-elasticsearch:8.15.3
-
-  nodeSets:
-    - name: default
-      count: 3
-      config:
-        node.roles:
-          - master
-          - data
-          - ingest
-        node.store.allow_mmap: false
-
-      podTemplate:
-        spec:
-          containers:
-            - name: elasticsearch
-              resources:
-                requests:
-                  cpu: 500m
-                  memory: "2Gi"
-                  ephemeral-storage: 2Gi
-                limits:
-                  cpu: 750m
-                  memory: "2Gi"
-                  ephemeral-storage: 10Gi
-
-  volumeClaimTemplates:
-    - metadata:
-        name: elasticsearch-data
-      spec:
-        accessModes:
-          - ReadWriteOnce
-        resources:
-          requests:
-            storage: 10Gi
-
-seaweedfs:
-  enabled: false
-  master:
-    replicas: 3
-  volume:
-    enabled: true
-    replicas: 3
-    dataDirs:
-      - name: data
-        type: "persistentVolumeClaim"
-        storageClass: "standard"
-        size: "8Gi"
-        maxVolumes: 0
-  filer:
-    enabled: true
-    replicas: 3
-    extraEnvironmentVars:
-      WEED_MYSQL_ENABLED: "true"
-      WEED_MYSQL_HOSTNAME: "{{ .Release.Name }}-mariadb"
-      WEED_MYSQL_DATABASE: "openmrs"
-      WEED_MYSQL_USERNAME: "openmrs"
-      WEED_LEVELDB2_ENABLED: "false"
-    secretExtraEnvironmentVars:
-      WEED_MYSQL_PASSWORD:
-        secretKeyRef:
-          name: "openmrs-backend-mariadb-secret"
-          key: user-password
-  admin:
-    enabled: false
-    urlPrefix: /seaweedfs-admin
-    ingress:
-      enabled: false
-    httpRoute:
-      enabled: false
-      parentRefs:
-        name: traefik-gateway
-        namespace: openmrs-system
-      hostnames:
-        - localhost
-  s3:
-    enabled: true
-    replicas: 2
-    enableAuth: true
-    credentials:
-      admin:
-        accessKey: "openmrs"
-        secretKey: "OpenMRS123"
+  uris: ""            # When non-empty, the workload ConfigMap/Secret add hibernate
+                      # search backend URIs/credentials (external search clusters).
+  username: ""
+  password: ""
 
 imagePullSecrets: []
 
@@ -251,112 +157,21 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
 
-
-# Monitoring of logs & metrics
-monitoring:
+seaweedfs:
   enabled: false
-
-grafana:
-  adminPassword: "Admin123"
-  grafana.ini: # Needed for serving from path
-    server:
-      domain: localhost
-      root_url: "%(protocol)s://%(domain)s/grafana"
-      serve_from_sub_path: true
-    dashboards:
-      default_home_dashboard_path: /var/lib/grafana/dashboards/default/logs-dashboard.json
-    log:
-      level: warn
-    dataproxy:
-      timeout: 300
-      keep_alive_seconds: 300
-  ingress:
+  admin:
     enabled: false
-    hosts:
-      - "localhost"
-    path: '/grafana'
-  route: {}
-  # Custom HTTPRoute config used by grafana-httproute.yaml
-  httpRoute:
-    enabled: false
-    parentRefs:
-      name: traefik-gateway
-      namespace: openmrs-system
-    hostnames:
-      - localhost
-    path: /grafana
-  datasources:
-    datasources.yaml:
-      apiVersion: 1
-      datasources:
-        - name: Loki
-          type: loki
-          url: "http://{{ .Release.Name }}-loki.{{ .Release.Namespace }}.svc.cluster.local:3100"
-          access: proxy
-          isDefault: true
-  dashboardProviders:
-    dashboardproviders.yaml:
-      apiVersion: 1
-      providers:
-        - name: 'default'
-          orgId: 1
-          folder: ''
-          type: file
-          disableDeletion: false
-          editable: true
-          options:
-            path: /var/lib/grafana/dashboards/default
-  dashboardsConfigMaps:
-    default: "logs-dashboard"
-
-loki:
-  deploymentMode: SingleBinary
-  # Explicitly disable scalable targets to satisfy validation when using filesystem storage
-  read:
-    replicas: 0
-  write:
-    replicas: 0
-  backend:
-    replicas: 0
-  singleBinary:
-    replicas: 1
-    persistence:
-      enabled: true
-      size: 10Gi
-  test:
-    enabled: false
-  lokiCanary:
-    enabled: false
-  loki:
-    auth_enabled: false
-    commonConfig:
-      replication_factor: 1
-    server:
-      log_level: warn
-      http_server_read_timeout: 300s
-      http_server_write_timeout: 300s
-    limits_config:
-      retention_period: 14d
-      query_timeout: 300s
-    compactor:
-      retention_enabled: true
-      delete_request_store: filesystem
-    storage:
-      type: 'filesystem'
-    schemaConfig:
-      configs:
-        - from: "2024-01-01"
-          store: tsdb
-          object_store: filesystem
-          schema: v13
-          index:
-            prefix: index_
-            period: 24h
-
-alloy:
-  alloy:
-    configMap:
-      create: false
-      name: alloy-config
-  controller:
-    type: daemonset
+    urlPrefix: /seaweedfs-admin
+    httpRoute:
+      enabled: false
+      parentRefs:
+        name: traefik-gateway
+        namespace: openmrs-system
+      hostnames:
+        - localhost
+  # Must match the umbrella's top-level seaweedfs.s3.credentials.admin.*.
+  s3:
+    credentials:
+      admin:
+        accessKey: "openmrs"
+        secretKey: "OpenMRS123"

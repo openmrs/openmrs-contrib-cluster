@@ -4,6 +4,13 @@
 
 enabled: true
 
+# SPA runtime configuration (rendered into the frontend ConfigMap). Defaults match
+# the primary umbrella's values; a tenant overrides per-tenant (e.g. configUrls).
+spaPath: "/openmrs/spa"
+apiUrl: "/openmrs"
+configUrls: "/openmrs/spa/config-core_demo.json"
+defaultLocale: "en"
+
 replicaCount: 2
 
 image:
@@ -45,14 +52,14 @@ service:
 
 gateway:
   enabled: true
-  path: /openmrs/spa
+  path: ""       # defaults to spaPath if unset
   parentRefs:
     name: traefik-gateway
     namespace: openmrs-system
 
 rootRedirect:
   enabled: false
-  targetPath: /openmrs/spa/home
+  targetPath: ""  # defaults to "<spaPath>/home" if unset
   parentRefs:
     name: traefik-gateway
     namespace: openmrs-system

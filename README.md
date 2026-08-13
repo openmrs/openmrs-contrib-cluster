@@ -70,12 +70,12 @@ With the default `kind-openmrs.yaml`, the following dashboards are accessible ou
 
 | Service | URL | Controlled by |
 |---------|-----|---------------|
-| Grafana (logs dashboard) | http://localhost:8080/grafana/ | `openmrs-backend.monitoring.enabled` |
-| SeaweedFS Admin (cluster overview & file browser) | http://localhost:8080/seaweedfs-admin/ | `openmrs-backend.seaweedfs.admin.httpRoute.enabled` |
+| Grafana (logs dashboard) | http://localhost:8080/grafana/ | `monitoring.enabled` (deploys Grafana/Loki/Alloy via the umbrella) |
+| SeaweedFS Admin (cluster overview & file browser) | http://localhost:8080/seaweedfs-admin/ | `seaweedfs.enabled` + `seaweedfs.admin.enabled` (deploys it) and `openmrs-backend.seaweedfs.admin.httpRoute.enabled` (exposes the route) |
 
 No port-forwarding needed — Traefik binds the port directly. Default credentials: Grafana `admin` / `Admin123`, SeaweedFS Admin `admin` / `Admin123`.
 
-To disable monitoring (Grafana, Loki, Alloy), set `openmrs-backend.monitoring.enabled=false` in `kind-openmrs.yaml` or pass `--set openmrs-backend.monitoring.enabled=false` to `helm`.
+To disable monitoring (Grafana, Loki, Alloy), set `monitoring.enabled=false` in `kind-openmrs.yaml` or pass `--set monitoring.enabled=false` to `helm`.
 
 ### Make targets
 
@@ -98,18 +98,145 @@ To disable monitoring (Grafana, Loki, Alloy), set `openmrs-backend.monitoring.en
 | `SKIP_OPERATORS=true` | `false` | Skip `openmrs-operator` chart install |
 | `SKIP_OPENMRS=true` | `false` | Skip OpenMRS deployment (exit after step 3) |
 
+### 6. Deploy additional tenants (multi-tenancy)
+
+The `helm/openmrs-tenant` chart deploys an isolated OpenMRS tenant (backend + frontend)
+that shares the primary cluster's MariaDB. It is a **thin umbrella**: the backend and
+frontend workloads come from the shared `openmrs-backend` / `openmrs-frontend` charts
+(consumed as dependencies), and the tenant chart only supplies the per-tenant
+configuration on top of them. Each tenant is a separate Helm release in its own namespace.
+
+#### Prerequisites
+
+- Primary OpenMRS stack deployed and running (steps 1–4 above)
+- MariaDB accessible from tenant namespace (default DNS: `<primary-release>-mariadb.<primary-namespace>.svc.cluster.local`, e.g. `openmrs-mariadb.openmrs.svc.cluster.local`)
+- A database and user created for the tenant:
+
+```bash
+kubectl exec -n openmrs svc/openmrs-mariadb -- mysql -u root -pRoot123 -e "
+  CREATE DATABASE IF NOT EXISTS openmrs_<tenant> CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+  CREATE USER IF NOT EXISTS '<tenant>_user'@'%' IDENTIFIED BY '<password>';
+  GRANT ALL PRIVILEGES ON openmrs_<tenant>.* TO '<tenant>_user'@'%';
+  FLUSH PRIVILEGES;
+"
+```
+
+#### Install a tenant
+
+A tenant connects to the shared MariaDB via a full JDBC URL
+(`openmrs-backend.db.url`). `db.hostname` (and `db.port`) must point at the same
+MariaDB — the backend image's `wait-for-it` preflight gates on
+`OMRS_DB_HOSTNAME:OMRS_DB_PORT` (defaulting to `localhost:3306`, which never
+resolves), so the JDBC URL alone is not enough. Vendor the shared charts once,
+then install:
+
+```bash
+helm dependency update helm/openmrs-tenant   # once — vendors openmrs-backend/openmrs-frontend
+
+helm install <tenant> helm/openmrs-tenant \
+  -n tenant-<tenant> --create-namespace \
+  --set global.tenant.name=<tenant> \
+  --set global.defaultStorageClass=standard \
+  --set openmrs-backend.db.url="jdbc:mariadb:loadbalance://<primary-release>-mariadb.<primary-namespace>.svc.cluster.local:3306/openmrs_<tenant>?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true" \
+  --set openmrs-backend.db.hostname=<primary-release>-mariadb.<primary-namespace>.svc.cluster.local \
+  --set openmrs-backend.db.port=3306 \
+  --set openmrs-backend.db.username=<tenant>_user \
+  --set openmrs-backend.db.password=<password>
+```
+
+Example for a tenant named `coast`:
+
+```bash
+helm install coast helm/openmrs-tenant \
+  -n tenant-coast --create-namespace \
+  --set global.tenant.name=coast \
+  --set global.defaultStorageClass=standard \
+  --set openmrs-backend.db.url="jdbc:mariadb:loadbalance://openmrs-mariadb.openmrs.svc.cluster.local:3306/openmrs_coast?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true" \
+  --set openmrs-backend.db.hostname=openmrs-mariadb.openmrs.svc.cluster.local \
+  --set openmrs-backend.db.port=3306 \
+  --set openmrs-backend.db.username=coast_user \
+  --set openmrs-backend.db.password=CoastPass123
+```
+
+> **Naming:** resources are named from the **release name** (the first argument to
+> `helm install`) by the shared charts, e.g. release `coast` → `coast-openmrs-backend` /
+> `coast-openmrs-frontend`.
+>
+> **Tenant label:** `global.tenant.name` sets the `app.kubernetes.io/tenant` label on
+> the backend and frontend **pods** (it propagates into the shared charts as a global).
+> It does **not** land on Services/ConfigMaps — labelling every resource per tenant
+> would need a `commonLabels` hook on the shared charts (planned).
+
+#### Verification
+
+```bash
+# Check pods with tenant label
+kubectl get pods -n tenant-<tenant> -L app.kubernetes.io/tenant
+
+# Wait for ready
+kubectl wait --for=condition=ready pod -n tenant-<tenant> --all --timeout=600s
+
+# Port-forward to backend (API)
+kubectl port-forward -n tenant-<tenant> svc/<tenant>-openmrs-backend 8080:8080
+
+# Port-forward to frontend (SPA)
+kubectl port-forward -n tenant-<tenant> svc/<tenant>-openmrs-frontend 8081:80
+```
+
+> **Note on routing:** tenant HTTPRoutes are disabled in this chart
+> (`openmrs-backend.gateway.enabled` and `openmrs-frontend.gateway.enabled` default to
+> `false`) — per-tenant routing is deferred to a later phase (TRUNK-6654), since the
+> shared charts' routes carry no hostname and would collide on the shared gateway.
+> Reach the backend API via `kubectl port-forward` as shown. The **frontend SPA UI is
+> not fully usable over port-forward** — the app shell requests its assets under
+> `SPA_PATH` (`/openmrs/spa`), which needs a gateway rewrite (stripping the prefix
+> before nginx) that port-forward cannot provide. Once tenant routing lands, each
+> tenant's frontend and backend will sit behind a per-tenant hostname
+> (e.g. `<tenant>.example.com`), like the primary OpenMRS stack.
+
+#### Tenant chart parameters
+
+The tenant chart's own values, plus the most common shared-chart overrides it passes
+through. For the full shared-chart surface, see `helm/openmrs-backend/values.yaml` and
+`helm/openmrs-frontend/values.yaml`.
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `global.tenant.name` | Tenant identifier; sets the `app.kubernetes.io/tenant` label on backend/frontend pods | **required** |
+| `global.tenant.hostname` | Per-tenant hostname, reserved for future routing | `""` |
+| `global.defaultStorageClass` | StorageClass for tenant PVCs (overrides the shared chart default) | `""` |
+| `openmrs-backend.db.url` | Full JDBC URL to the shared MariaDB | **required** |
+| `openmrs-backend.db.hostname` | Shared MariaDB host, used by the backend's `wait-for-it` preflight (`OMRS_DB_HOSTNAME`) | **required** |
+| `openmrs-backend.db.port` | Shared MariaDB port | `3306` |
+| `openmrs-backend.db.username` | Tenant DB user | **required** |
+| `openmrs-backend.db.password` | Tenant DB password | **required** |
+| `openmrs-backend.podLabels` | Extra labels for backend pods | `{}` |
+| `openmrs-frontend.enabled` | Deploy the frontend | `true` |
+| `openmrs-frontend.spaPath` | URL path the SPA is served from (`SPA_PATH`) | `"/openmrs/spa"` |
+| `openmrs-frontend.apiUrl` | SPA → backend API URL (`API_URL`) | `"/openmrs"` |
+| `openmrs-frontend.defaultLocale` | Default UI locale (`SPA_DEFAULT_LOCALE`) | `"en"` |
+| `openmrs-frontend.configUrls` | Distro config JSON URLs (`SPA_CONFIG_URLS`); omitted when empty | `""` |
+| `openmrs-frontend.replicaCount` | Frontend replicas | `1` |
+| `openmrs-frontend.podLabels` | Extra labels for frontend pods | `{}` |
+
+Images and versions are inherited from the shared charts (backend `3.7.x-no-demo`,
+frontend `3.7.x`); override via `openmrs-backend.image.*` / `openmrs-frontend.image.*`
+if needed. Clustering, autoscaling, and shared storage are shared-chart features and
+are covered in later phases.
+
 ### Alternative: install from Helm registry
 
       helm repo add openmrs https://openmrs.github.io/openmrs-contrib-cluster/
       helm upgrade --install --create-namespace -n openmrs \
         --set global.defaultStorageClass=standard openmrs openmrs/openmrs
 
-To use a MariaDB Galera cluster instead of basic primary-secondary replication:
+The embedded MariaDB CR uses Galera clustering by default (`global.mariadb.galera: true`).
+To use basic primary/replica replication instead:
 
       helm upgrade --install --create-namespace -n openmrs \
         --set global.defaultStorageClass=standard \
-        --set openmrs-backend.mariadb.enabled=false \
-        --set openmrs-backend.galera.enabled=true openmrs openmrs/openmrs
+        --set global.mariadb.galera=false \
+        --set global.mariadb.replicas=2 openmrs openmrs/openmrs
 
 ### Kubernetes Dashboard (optional)
 
@@ -121,6 +248,31 @@ To use a MariaDB Galera cluster instead of basic primary-secondary replication:
       kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
       # Go to https://localhost:8443/ and login with generated token
 
+#### Migrating to 2.0.0
+
+`openmrs`/`openmrs-backend`/`openmrs-frontend` 2.0.0 relocated infra-deploy
+values out of `openmrs-backend` and into the umbrella's top level (`openmrs-backend`
+is now a workload-only chart). A values file written for 1.x will fail to render
+with an error naming the exact key that moved, rather than silently dropping it.
+
+| Old key (≤ 1.2.2) | New key (2.0.0+) |
+|---|---|
+| `openmrs-backend.monitoring.*` | `monitoring.*` |
+| `openmrs-backend.grafana.*` | `grafana.*` |
+| `openmrs-backend.loki.*` | `loki.*` |
+| `openmrs-backend.alloy.*` | `alloy.*` |
+| `openmrs-backend.elasticsearch-eck.*` | `elasticsearch-eck.*` |
+| `openmrs-backend.seaweedfs.master.*` / `.volume.*` / `.filer.*` / `.s3.enabled` / `.s3.replicas` / `.s3.enableAuth` | `seaweedfs.*` (same sub-paths, top level) |
+| `openmrs-backend.seaweedfs.admin.ingress.*` | `seaweedfs.admin.ingress.*` |
+| `openmrs-backend.mariadb.auth.*` | `global.mariadb.auth.*` |
+| `openmrs-backend.mariadb.enabled` / `.galera` / `.replicas` | `global.mariadb.enabled` / `.galera` / `.replicas` |
+| `openmrs-backend.galera.*` | removed (was never read by any template) — use `global.mariadb.*` |
+| `openmrs-backend.elasticsearch.enabled: true` (used to deploy the ECK cluster) | same path, but now **only** wires the workload — also set top-level `elasticsearch.enabled: true` to actually deploy it |
+| `openmrs-backend.seaweedfs.enabled: true` (used to deploy SeaweedFS) | same path, but now **only** wires the workload — also set top-level `seaweedfs.enabled: true` to actually deploy it |
+| `openmrs-backend.seaweedfs.admin.enabled: true` (used to deploy the Admin component) | same path, but now **only** wires the workload's own HTTPRoute — also set top-level `seaweedfs.admin.enabled: true` to actually deploy the Admin component |
+
+The last three rows are the trap in this table: the *path* didn't change, only what it does, so nothing about the key itself tells you something's different. `helm/openmrs/templates/NOTES.txt` fails the render if `openmrs-backend.elasticsearch.enabled`/`.seaweedfs.enabled`/`.seaweedfs.admin.enabled` is `true` without the matching top-level flag, specifically to catch this. `openmrs-backend.elasticsearch.uris`/`.username`/`.password` and `openmrs-backend.seaweedfs.s3.credentials.admin.*`/`.admin.httpRoute.*`/`.admin.urlPrefix` are genuinely unaffected — those only ever wired the workload, never deployed anything.
+
 #### Parameters
 
 ##### Global parameters
@@ -131,7 +283,7 @@ To use a MariaDB Galera cluster instead of basic primary-secondary replication:
 
 #### Common parameters
 
-Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `traefik-gateway`, `openmrs-backend.mariadb`, `openmrs-backend.galera`.
+Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `traefik-gateway`, `mariadb`.
 
 | Name                | Description                  | Default Value                                            |
 |---------------------|------------------------------|----------------------------------------------------------|
@@ -141,54 +293,53 @@ Prepend with the name of the service: `openmrs-backend`, `openmrs-frontend`, `tr
 
 #### OpenMRS-backend parameters
 
+`openmrs-backend` is a workload-only chart (no embedded infra) so both the umbrella
+and a tenant chart can consume it. Infra deploy/scale settings live on the umbrella
+(next section); these values only control how the workload *connects* to that infra.
+
 | Name                                                             | Description                                                                                                            | Default Value                                             |
 |------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
-| `openmrs-backend.db.hostname`                                    | Hostname for OpenMRS DB                                                                                                | `""` or defaults to galera or mariadb hostname if enabled |
-| `openmrs-backend.db.database`                                    | OpenMRS database name for external (bring-your-own) databases. Empty falls back to `"openmrs"`. Ignored when `mariadb.enabled=true`, where the name always comes from `mariadb.auth.database` | `""` |
-| `openmrs-backend.db.username`                                    | Username for an external (bring-your-own) database. Used only when `mariadb.enabled=false`                             | `"openmrs"`                                               |
-| `openmrs-backend.persistance.size`                               | Size of persistent volume to claim (for search index, attachments, etc.)                                               | `"8Gi"`                                                   |
-| `openmrs-backend.mariadb.enabled`                                | Create MariaDB with read-only replica                                                                                  | `"true"`                                                  |
-| `openmrs-backend.mariadb.primary.persistence.storageClass`       | MariaDB primary persistent volume storage Class                                                                        | `global.defaultStorageClass`                              |
-| `openmrs-backend.mariadb.secondary.persistence.storageClass`     | MariaDB secondary persistent volume storage Class                                                                      | `global.defaultStorageClass`                              |
-| `openmrs-backend.mariadb.auth.rootPassword`                      | Password for the `root` user. Ignored if existing secret is provided.                                                  | `"Root123"`                                               |
-| `openmrs-backend.mariadb.auth.database`                          | Name for an OpenMRS database                                                                                           | `"openmrs"`                                               |
-| `openmrs-backend.mariadb.auth.username`                          | Name for a DB user                                                                                                     | `"openmrs"`                                               |
-| `openmrs-backend.mariadb.auth.password`                          | Name for a DB user's password                                                                                          | `"OpenMRS123"`                                            |
-| `openmrs-backend.galera.enabled`                                 | Create MariaDB Galera cluster with 3 nodes (default)                                                                   | `"true"`                                                  |
-| `openmrs-backend.galera.rootUser.password`                       | Password for the `root` user. Ignored if existing secret is provided.                                                  | `"true"`                                                  |
-| `openmrs-backend.galera.db.name`                                 | Name for an OpenMRS database                                                                                           | `"openmrs"`                                               |
-| `openmrs-backend.galera.db.user`                                 | Name for a DB user                                                                                                     | `"openmrs"`                                               |
-| `openmrs-backend.galera.db.password`                             | Name for a DB user's password                                                                                          | `"OpenMRS123"`                                            |
-| `openmrs-backend.elasticsearch.enabled` | Deploy an ECK-managed Elasticsearch cluster | `false` |
-| `openmrs-backend.elasticsearch.version` | Elasticsearch version (must be compatible with installed ECK operator) | `"8.15.3"` |
-| `openmrs-backend.elasticsearch.replicas` | Number of Elasticsearch nodes | `1` |
-| `openmrs-backend.elasticsearch.esJavaOpts` | JVM heap flags. Increase to `-Xmx512m -Xms512m` minimum in production | `"-Xmx128m -Xms128m"` |
-| `openmrs-backend.elasticsearch.plugins` | Comma-separated plugins installed via postStart hook | `"analysis-phonetic"` |
-| `openmrs-backend.elasticsearch.storageSize` | Persistent volume size per node | `"8Gi"` |
-| `openmrs-backend.elasticsearch.resources` | Container resource requests and limits | see `values.yaml` |
-| `openmrs-backend.elasticsearch.sysctlVmMaxMapCount` | vm.max_map_count set by privileged init container (must be >= 262144) | `262144` |
-| `openmrs-backend.elasticsearch.disableSecurity` | Disable TLS and authentication (local/dev only, never use in production) | `false` |
-| `openmrs-backend.monitoring.enabled`                             | Enable monitoring (Grafana, Loki, Alloy)                                                                               | `"false"`                                                 |
-| `openmrs-backend.grafana.adminPassword`                          | Grafana admin password                                                                                                 | `"Admin123"`                                              |
-| `openmrs-backend.grafana.ingress.enabled`                        | Enable ingress for Grafana (disabled when using HTTPRoute)                                                             | `"true"`                                                  |
-| `openmrs-backend.grafana.ingress.hosts`                          | Hosts for Grafana ingress                                                                                              | `["grafana.local"]`                                       |
-| `openmrs-backend.grafana.httpRoute.enabled`                      | Enable Gateway API HTTPRoute for Grafana                                                                               | `"false"`                                                 |
-| `openmrs-backend.grafana.httpRoute.hostnames`                    | Hostnames for Grafana HTTPRoute                                                                                        | `["localhost"]`                                            |
-| `openmrs-backend.grafana.httpRoute.path`                         | Path prefix for Grafana HTTPRoute                                                                                      | `"/grafana"`                                              |
-| `openmrs-backend.seaweedfs.enabled`                        | Deploy SeaweedFS S3-compatible object storage                                                    | `"false"`                                                 |
-| `openmrs-backend.seaweedfs.master.replicas`                | Number of SeaweedFS master nodes for Raft consensus                                                               | `3`                                                       |
-| `openmrs-backend.seaweedfs.volume.replicas`                | Number of SeaweedFS volume servers (data storage pods); one per worker node recommended                           | `3`                                                       |
-| `openmrs-backend.seaweedfs.volume.dataDirs[0].size`        | Persistent volume size per volume server pod                                                                      | `"8Gi"`                                                   |
-| `openmrs-backend.seaweedfs.filer.replicas`                 | Number of SeaweedFS filer replicas for metadata store (3+ recommended for HA)                                     | `3`                                                       |
-| `openmrs-backend.seaweedfs.admin.enabled`                  | Deploy SeaweedFS Admin component                                                                               | `"false"`                                                 |
-| `openmrs-backend.seaweedfs.admin.urlPrefix`                | URL path prefix for admin dashboard                                                                               | `"/seaweedfs-admin"`                                      |
-| `openmrs-backend.seaweedfs.admin.httpRoute.enabled`        | Enable Gateway API HTTPRoute for admin dashboard                                                                  | `"false"`                                                 |
-| `openmrs-backend.seaweedfs.admin.httpRoute.hostnames`      | Hostnames for admin HTTPRoute                                                                                     | `["localhost"]`                                            |
-| `openmrs-backend.seaweedfs.admin.secret.adminPassword`     | Admin dashboard password (empty = no auth)                                                                        | `"Admin123"`                                              |
-| `openmrs-backend.seaweedfs.s3.replicas`                    | Number of S3 API gateway replicas (stateless)                                                                     | `2`                                                       |
-| `openmrs-backend.seaweedfs.s3.enableAuth`                  | Enable S3 credential authentication                                                                               | `"true"`                                                  |
-| `openmrs-backend.seaweedfs.s3.credentials.admin.accessKey` | S3 access key (must match backend's `storage.s3.accessKeyId`)                                                     | `"openmrs"`                                               |
-| `openmrs-backend.seaweedfs.s3.credentials.admin.secretKey` | S3 secret key (must match backend's `storage.s3.secretAccessKey`)                                                 | `"OpenMRS123"`                                            |
+| `openmrs-backend.db.hostname`                                    | External DB hostname. Only used when `global.mariadb.enabled=false`                                                     | `""` |
+| `openmrs-backend.db.database`                                    | OpenMRS database name for external (bring-your-own) databases. Empty falls back to `"openmrs"`. Ignored when `global.mariadb.enabled=true`, where the name always comes from `global.mariadb.auth.database` | `""` |
+| `openmrs-backend.db.username` / `.password`                      | Credentials for an external (bring-your-own) database. Used only when `global.mariadb.enabled=false`                   | `"openmrs"` / `"OpenMRS123"` |
+| `openmrs-backend.db.url`                                         | Full JDBC URL for an external database. **Requires `db.hostname` set too** — the URL is the JDBC connection, `db.hostname` feeds the image's startup preflight (which otherwise falls back to `localhost`). Ignored when `global.mariadb.enabled=true` | `""` |
+| `openmrs-backend.persistence.size`                               | Size of persistent volume to claim (for search index, attachments, etc.)                                               | `"8Gi"`                                                   |
+| `openmrs-backend.elasticsearch.enabled`                          | Wire the workload to use Elasticsearch (hibernate-search env/volumes). Does **not** deploy a cluster — see `elasticsearch.enabled` below | `false` |
+| `openmrs-backend.elasticsearch.uris` / `.username` / `.password` | External Elasticsearch connection details, used when `uris` is non-empty                                                | `""` |
+| `openmrs-backend.seaweedfs.enabled`                              | Wire the workload for S3 storage (injects S3 credentials into the Secret). Does **not** deploy SeaweedFS — see `seaweedfs.enabled` below | `false` |
+| `openmrs-backend.seaweedfs.admin.httpRoute.enabled`              | Expose a Gateway API HTTPRoute to the SeaweedFS Admin service (deployed separately by the umbrella)                     | `false` |
+| `openmrs-backend.seaweedfs.admin.httpRoute.hostnames`            | Hostnames for the admin HTTPRoute                                                                                       | `["localhost"]` |
+| `openmrs-backend.seaweedfs.s3.credentials.admin.accessKey` / `.secretKey` | S3 access/secret key — must match the umbrella's `seaweedfs.s3.credentials.admin.*` below                        | `"openmrs"` / `"OpenMRS123"` |
+
+#### Umbrella infra parameters (`helm/openmrs`)
+
+The umbrella owns and deploys the infra (MariaDB, Elasticsearch, SeaweedFS, Grafana/Loki/Alloy);
+`openmrs-backend` above only carries the matching connection values. None of this
+exists in a tenant chart consuming the shared `openmrs-backend`/`openmrs-frontend` charts.
+
+| Name                                                        | Description                                                                                  | Default Value    |
+|--------------------------------------------------------------|------------------------------------------------------------------------------------------------|-------------------|
+| `global.mariadb.enabled`                                     | Deploy the embedded MariaDB CR **and** connect the backend workload to it — one flag, read by both | `true`            |
+| `global.mariadb.auth.database` / `.username` / `.password`   | Name/credentials for the OpenMRS database, read by both the MariaDB CR and the backend workload's connection — one value, not two to keep in sync | `"openmrs"` / `"openmrs"` / `"OpenMRS123"` |
+| `global.mariadb.replicas` / `.galera`                        | Replica count / Galera clustering mode — read by both the MariaDB CR and the backend's JDBC URL construction | `2` / `true`      |
+| `mariadb.auth.rootPassword`                                  | Password for the `root` user. Ignored if existing secret is provided. Umbrella-only — the backend workload never needs it | `"Root123"`       |
+| `mariadb.primary.persistence.size`                           | MariaDB primary persistent volume size                                                         | `"8Gi"`           |
+| `elasticsearch.enabled`                                      | Deploy an ECK-managed Elasticsearch cluster                                                    | `false`           |
+| `elasticsearch-eck.*`                                        | ECK `Elasticsearch` CR spec (`nodeSets`, `podTemplate.spec.containers[].resources`, `volumeClaimTemplates`) — see the ECK docs below | see `values.yaml` |
+| `seaweedfs.enabled`                                          | Deploy SeaweedFS (master/volume/filer/S3 gateway)                                              | `false`           |
+| `seaweedfs.master.replicas`                                  | Number of SeaweedFS master nodes for Raft consensus                                            | `3`               |
+| `seaweedfs.volume.replicas`                                  | Number of SeaweedFS volume servers (one per worker node recommended)                           | `3`               |
+| `seaweedfs.volume.dataDirs[0].size`                          | Persistent volume size per volume server pod                                                   | `"8Gi"`           |
+| `seaweedfs.filer.replicas`                                   | Number of SeaweedFS filer replicas (3+ recommended for HA)                                     | `3`               |
+| `seaweedfs.admin.enabled`                                    | Deploy the SeaweedFS Admin component                                                            | `false`           |
+| `seaweedfs.admin.secret.adminPassword`                       | Admin dashboard password (empty = no auth)                                                     | `"Admin123"`      |
+| `seaweedfs.s3.replicas`                                      | Number of S3 API gateway replicas (stateless)                                                  | `2`               |
+| `seaweedfs.s3.enableAuth`                                    | Enable S3 credential authentication                                                            | `true`            |
+| `seaweedfs.s3.credentials.admin.accessKey` / `.secretKey`    | S3 access/secret key — must match `openmrs-backend.seaweedfs.s3.credentials.admin.*` above      | `"openmrs"` / `"OpenMRS123"` |
+| `monitoring.enabled`                                          | Enable monitoring (deploys Grafana, Loki, Alloy)                                                | `false`           |
+| `grafana.adminPassword`                                       | Grafana admin password                                                                          | `"Admin123"`      |
+| `grafana.ingress.enabled` / `.hosts`                          | Ingress for Grafana (disabled when using HTTPRoute)                                              | `false` / `["localhost"]` |
+| `grafana.httpRoute.enabled` / `.hostnames` / `.path`          | Gateway API HTTPRoute for Grafana                                                                | `false` / `["localhost"]` / `"/grafana"` |
 
 See [MariaDB Operator](https://github.com/mariadb-operator/mariadb-operator) for MariaDB CRD parameters.
 
@@ -201,8 +352,8 @@ See [Grafana](https://github.com/grafana-community/helm-charts/blob/main/charts/
 #### Prerequisites: SeaweedFS (S3-compatible object storage)
 
 No separate operator installation is required. SeaweedFS is included as a
-Helm subchart dependency of `openmrs-backend`. When
-`openmrs-backend.seaweedfs.enabled=true`, the chart deploys:
+Helm subchart dependency of the `openmrs` umbrella (not `openmrs-backend`,
+which is workload-only). When `seaweedfs.enabled=true`, the umbrella deploys:
 
 | Component | Pods | Purpose |
 |---|---|---|
@@ -211,10 +362,14 @@ Helm subchart dependency of `openmrs-backend`. When
 | Filer | 3 | Metadata store required by the S3 gateway (uses MariaDB as backend for easy backup) |
 | S3 gateway | 2 | Stateless S3 API endpoint at `<release>-seaweedfs-s3:8333` (depends on filer) |
 
-Credentials are automatically configured via `s3.credentials.admin` values
-and injected into the backend's Secret as `storage.s3.accessKeyId` and
-`storage.s3.secretAccessKey`. See the backend parameters table above for
-configuration options.
+Credentials are configured via `s3.credentials.admin` values and injected into
+the backend's Secret as `storage.s3.accessKeyId` and `storage.s3.secretAccessKey`.
+This is declared in two places — `openmrs-backend.seaweedfs.s3.credentials.admin.*`
+(the workload's copy) and the umbrella's top-level `seaweedfs.s3.credentials.admin.*`
+(the third-party chart's own copy) — and must be kept in sync by hand; the
+third-party chart has its own values schema and doesn't share Helm's `global.*`
+mechanism the rest of the credential wiring uses. See the parameter tables above
+for both sides.
 
 ##### SeaweedFS Filer: MariaDB backend
 
@@ -232,8 +387,10 @@ appearing after the hardcoded entries):
 
 > The secret name in `secretExtraEnvironmentVars` is a hardcoded string because the
 > subchart does not process it through `tpl`. The default `{fullname}-mariadb-secret`
-> assumes `openmrs-backend` as the fullname. If you override `nameOverride` or
-> `fullnameOverride`, update this value to match.
+> assumes `openmrs-backend` as the fullname — the umbrella reconstructs this name via
+> the `openmrs.backendFullname` helper (`helm/openmrs/templates/_helpers.tpl`), which
+> reads `openmrs-backend.nameOverride`/`.fullnameOverride`. If you override either on
+> the backend, keep this value (and the umbrella's own mariadb Secret/SqlJob names) in sync.
 
 The chart also creates a pre-install hook Job that creates the `filemeta` table
 before the filer starts. This table is required by the filer's MariaDB store and
@@ -396,14 +553,21 @@ dependencies and run helm upgrade.
 
 ### Releasing from Github Actions
 
-1. Go to the "Actions" tab in the GitHub repository.
-2. Select the "Release Charts" workflow from the left sidebar.
-3. Click the "Run workflow" dropdown button.
-4. Enter the desired version (e.g., `1.2.2`) in the "Chart version" input field.
-5. Click the green "Run workflow" button.
+1. Bump `openmrs-backend`/`openmrs-frontend`/`openmrs-tenant` `Chart.yaml` (and the
+   dependency pins on backend/frontend in **both** `helm/openmrs/Chart.yaml` and
+   `helm/openmrs-tenant/Chart.yaml`) in a regular commit first — the workflow below
+   doesn't touch these charts, they version independently of the umbrella.
+2. Go to the "Actions" tab in the GitHub repository.
+3. Select the "Release Charts" workflow from the left sidebar.
+4. Click the "Run workflow" dropdown button.
+5. Enter the desired umbrella version (e.g., `2.0.0`) in the "version" input field.
+   `openmrs-operator` versions independently and is left untouched unless you also
+   fill in "operator_version" — leave it blank to skip releasing it this round.
+6. Click the green "Run workflow" button.
 
 This will:
-- Update the version in `Chart.yaml` files.
+- Update the version in `helm/openmrs/Chart.yaml` (and `helm/openmrs-operator/Chart.yaml`
+  if `operator_version` was set).
 - Commit and push the changes.
 - Create a git tag.
 - Package and release the charts to GitHub Pages.

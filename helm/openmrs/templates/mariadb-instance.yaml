@@ -1,22 +1,22 @@
-{{- if .Values.mariadb.enabled }}
+{{- if .Values.global.mariadb.enabled }}
 apiVersion: k8s.mariadb.com/v1alpha1
 kind: MariaDB
 metadata:
   name: {{ .Release.Name }}-mariadb
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "openmrs-backend.labels" . | nindent 4 }}
+    {{- include "openmrs.labels" . | nindent 4 }}
 spec:
   image: mariadb:{{ .Values.mariadb.image.tag | default "10.11" }}
 
   rootPasswordSecretKeyRef:
-    name: {{ include "openmrs-backend.fullname" . }}-mariadb-secret
+    name: {{ include "openmrs.backendFullname" . }}-mariadb-secret
     key: root-password
 
-  database: {{ .Values.mariadb.auth.database | default "openmrs" | quote }}
-  username: {{ .Values.mariadb.auth.username | default "openmrs" | quote }}
+  database: {{ .Values.global.mariadb.auth.database | default "openmrs" | quote }}
+  username: {{ .Values.global.mariadb.auth.username | default "openmrs" | quote }}
   passwordSecretKeyRef:
-    name: {{ include "openmrs-backend.fullname" . }}-mariadb-secret
+    name: {{ include "openmrs.backendFullname" . }}-mariadb-secret
     key: user-password
 
   port: 3306
@@ -36,20 +36,20 @@ spec:
     character_set_server=utf8mb4
     collation_server=utf8mb4_general_ci
 
-  {{- if .Values.mariadb.galera }}
+  {{- if .Values.global.mariadb.galera }}
   replicas: 3
   galera:
     enabled: true
     recovery:
       enabled: true
-  {{- else if gt (int (.Values.mariadb.replicas | default 2)) 1 }}
-  replicas: {{ .Values.mariadb.replicas }}
+  {{- else if gt (int (.Values.global.mariadb.replicas | default 2)) 1 }}
+  replicas: {{ .Values.global.mariadb.replicas }}
   replication:
     enabled: true
     primary:
       autoFailover: true
   {{- else }}
-  replicas: {{ .Values.mariadb.replicas }}
+  replicas: {{ .Values.global.mariadb.replicas }}
   {{- end }}
 
   resources:

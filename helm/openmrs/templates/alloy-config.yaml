@@ -4,7 +4,7 @@ kind: ConfigMap
 metadata:
   name: alloy-config
   labels:
-    {{- include "openmrs-backend.labels" . | nindent 4 }}
+    {{- include "openmrs.labels" . | nindent 4 }}
 data:
   config.alloy: |
     logging {

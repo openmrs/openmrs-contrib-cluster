@@ -4,8 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Chart version (e.g. 1.2.1)"
+        description: "openmrs (umbrella) chart version (e.g. 2.0.0). openmrs-backend/openmrs-frontend/openmrs-tenant are versioned independently — bump their Chart.yaml (and any dependency pin) in a regular commit first."
         required: true
+      operator_version:
+        description: "openmrs-operator chart version — set this to give it a release (it versions independently and has no working prior release to preserve). Leave blank to leave its Chart.yaml version untouched."
+        required: false
 
 jobs:
   release:
@@ -40,20 +43,18 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         env:
           VERSION: ${{ github.event.inputs.version }}
+          OPERATOR_VERSION: ${{ github.event.inputs.operator_version }}
         run: |
-          # Update version in Chart.yaml files
+          # openmrs-backend/openmrs-frontend/openmrs-tenant version independently — bump
+          # them by hand in a regular commit, not here. `helm dependency update` fails
+          # loudly if their Chart.yaml drifts from a pin below.
           sed -i "s/^version: .*/version: $VERSION/" helm/openmrs/Chart.yaml
-          sed -i "s/^version: .*/version: $VERSION/" helm/openmrs-backend/Chart.yaml
-          sed -i "s/^version: .*/version: $VERSION/" helm/openmrs-frontend/Chart.yaml
-          sed -i "s/^version: .*/version: $VERSION/" helm/openmrs-operator/Chart.yaml
-          # Update dependency versions in main chart
-          sed -i "/name: openmrs-backend/,/version:/ s/version: .*/version: $VERSION/" helm/openmrs/Chart.yaml
-          sed -i "/name: openmrs-frontend/,/version:/ s/version: .*/version: $VERSION/" helm/openmrs/Chart.yaml
+          if [[ -n "$OPERATOR_VERSION" ]]; then
+            sed -i "s/^version: .*/version: $OPERATOR_VERSION/" helm/openmrs-operator/Chart.yaml
+          fi
 
       - name: Build dependencies
         run: |
-          helm dependency update helm/openmrs-backend
-          helm dependency update helm/openmrs-frontend
           helm dependency update helm/openmrs
           helm dependency update helm/openmrs-operator
 

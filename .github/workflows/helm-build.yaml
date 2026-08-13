@@ -39,6 +39,9 @@ jobs:
       - name: Update Dependencies
         run: helm dependency update helm/openmrs
 
+      - name: Update Tenant Dependencies
+        run: helm dependency update helm/openmrs-tenant
+
       - name: Lint Main Chart
         run: helm lint helm/openmrs
 
@@ -46,25 +49,132 @@ jobs:
         run: helm package helm/openmrs
 
       - name: Validate Rendering (default values)
-        run: helm template helm/openmrs --generate-name
+        run: |
+          helm template helm/openmrs --generate-name > /tmp/default.yaml
+          grep -q 'OMRS_DB_URL: "jdbc:mariadb:loadbalance://release-name-mariadb.default.svc.cluster.local:3306/openmrs?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"' /tmp/default.yaml
+          grep -q 'OMRS_DB_NAME: "openmrs"' /tmp/default.yaml
 
       - name: Validate Rendering (full-featured)
         run: |
           helm template helm/openmrs --generate-name \
-            --values helm/kind-openmrs.yaml
+            --values helm/kind-openmrs.yaml > /tmp/full-featured.yaml
+          grep -q 'OMRS_DB_URL: "jdbc:mariadb:loadbalance://release-name-mariadb.default.svc.cluster.local:3306/openmrs?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"' /tmp/full-featured.yaml
+          grep -q 'OMRS_DB_NAME: "openmrs"' /tmp/full-featured.yaml
 
       - name: Validate Rendering (minimal, no optional features)
         run: |
           helm template helm/openmrs --generate-name \
-            --set openmrs-backend.monitoring.enabled=false \
-            --set openmrs-backend.elasticsearch.enabled=false \
-            --set openmrs-backend.seaweedfs.enabled=false
+            --set monitoring.enabled=false \
+            --set elasticsearch.enabled=false \
+            --set seaweedfs.enabled=false > /tmp/minimal.yaml
+          grep -q 'OMRS_DB_URL: "jdbc:mariadb:loadbalance://release-name-mariadb.default.svc.cluster.local:3306/openmrs?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"' /tmp/minimal.yaml
+          grep -q 'OMRS_DB_NAME: "openmrs"' /tmp/minimal.yaml
 
       - name: Validate Rendering (external database)
         run: |
           helm template helm/openmrs --generate-name \
-            --set openmrs-backend.mariadb.enabled=false \
+            --set global.mariadb.enabled=false \
             --set openmrs-backend.db.database=openmrs_rds \
             --set openmrs-backend.db.username=rdsuser > /tmp/external-db.yaml
           grep -q 'OMRS_DB_USERNAME: "rdsuser"' /tmp/external-db.yaml
           grep -q 'OMRS_DB_NAME: "openmrs_rds"' /tmp/external-db.yaml
+
+      - name: Validate Rendering (external database via db.url)
+        run: |
+          # The db.url path must emit OMRS_DB (driver select) and OMRS_DB_HOSTNAME/PORT
+          # (startup wait-for-it) — without them the backend picks the wrong JDBC driver
+          # or waits on localhost. Exercised here at the openmrs-backend level, not only
+          # via a consumer chart.
+          helm template helm/openmrs-backend --generate-name \
+            --set global.mariadb.enabled=false \
+            --set db.url="jdbc:mariadb:loadbalance://ext-mariadb:3306/openmrs_ext" \
+            --set db.hostname=ext-mariadb \
+            --set db.username=extuser \
+            --set db.password=extpass > /tmp/backend-url.yaml
+          grep -q 'OMRS_DB: "mariadb"' /tmp/backend-url.yaml
+          grep -q 'OMRS_DB_HOSTNAME: "ext-mariadb"' /tmp/backend-url.yaml
+          grep -q 'OMRS_DB_URL: "jdbc:mariadb:loadbalance://ext-mariadb:3306/openmrs_ext"' /tmp/backend-url.yaml
+          if err=$(helm template helm/openmrs --generate-name \
+              --set global.mariadb.enabled=false \
+              --set openmrs-backend.db.url=jdbc:mariadb://ext-mariadb:3306/openmrs_ext 2>&1); then
+            echo "expected db.url with no db.hostname to be rejected"; exit 1
+          fi
+          grep -qF 'db.hostname is required alongside db.url' <<<"$err"
+
+      - name: Validate Rendering (MariaDB replication mode)
+        run: |
+          helm template helm/openmrs --generate-name \
+            --set global.mariadb.galera=false \
+            --set global.mariadb.replicas=2 > /tmp/replication.yaml
+          grep -q 'replication:' /tmp/replication.yaml
+          grep -q 'OMRS_DB_URL: "jdbc:mariadb:replication://release-name-mariadb-primary.default.svc.cluster.local:3306,release-name-mariadb-secondary.default.svc.cluster.local:3306/openmrs?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"' /tmp/replication.yaml
+
+      - name: Validate 1.x values are rejected
+        run: |
+          fail_if_renders() {
+            if helm template helm/openmrs --generate-name --set "$1" >/dev/null 2>&1; then
+              echo "expected the 2.0.0 guard to reject $1"
+              exit 1
+            fi
+          }
+          fail_if_renders openmrs-backend.monitoring.enabled=true
+          fail_if_renders openmrs-backend.mariadb.auth.password=x
+          fail_if_renders openmrs-backend.elasticsearch.enabled=true
+          fail_if_renders openmrs-backend.seaweedfs.enabled=true
+          fail_if_renders openmrs-backend.seaweedfs.master.replicas=7
+          fail_if_renders openmrs-backend.seaweedfs.volume.replicas=7
+          fail_if_renders openmrs-backend.seaweedfs.filer.replicas=7
+          fail_if_renders openmrs-backend.seaweedfs.s3.enabled=true
+          fail_if_renders openmrs-backend.seaweedfs.s3.replicas=99
+          fail_if_renders openmrs-backend.seaweedfs.s3.enableAuth=true
+          fail_if_renders openmrs-backend.seaweedfs.admin.ingress.enabled=true
+          fail_if_renders openmrs-backend.seaweedfs.admin.enabled=true
+
+      - name: Lint and Render Tenant Chart
+        run: |
+          TENANT_VALUES="--set global.tenant.name=tenant1 \
+            --set openmrs-backend.db.url=jdbc:mariadb:loadbalance://mariadb.example.svc.cluster.local:3306/openmrs_tenant1?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true \
+            --set openmrs-backend.db.hostname=mariadb.example.svc.cluster.local \
+            --set openmrs-backend.db.username=ci_user \
+            --set openmrs-backend.db.password=ci-pass"
+          helm lint helm/openmrs-tenant $TENANT_VALUES
+          helm template tenant1 helm/openmrs-tenant $TENANT_VALUES > /tmp/tenant.yaml
+          grep -q 'name: tenant1-openmrs-backend' /tmp/tenant.yaml
+          grep -q 'name: tenant1-openmrs-frontend' /tmp/tenant.yaml
+          grep -q 'OMRS_DB_URL: "jdbc:mariadb:loadbalance://mariadb.example.svc.cluster.local:3306/openmrs_tenant1?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"' /tmp/tenant.yaml
+          grep -q 'OMRS_DB_HOSTNAME: "mariadb.example.svc.cluster.local"' /tmp/tenant.yaml
+          grep -q 'SPA_PATH: "/openmrs/spa"' /tmp/tenant.yaml
+          [ "$(grep -c 'app.kubernetes.io/tenant: "tenant1"' /tmp/tenant.yaml)" -eq 2 ]
+          if grep -q 'storageClassName: ""' /tmp/tenant.yaml; then
+            echo "empty storageClassName means no-class (PVC stays Pending); it must be omitted"; exit 1
+          fi
+          # Phase-1 invariant: tenant routing is deferred to Phase 3 (TRUNK-6654), so the
+          # shared charts' HTTPRoutes are disabled by default — a host-less route would
+          # collide with the primary and other tenants on the shared gateway.
+          if grep -q 'kind: HTTPRoute' /tmp/tenant.yaml; then
+            echo "expected NO HTTPRoutes in the default tenant render (gateway must stay off until Phase 3)"; exit 1
+          fi
+          # DB connection is required: a tenant without db.url/hostname/username/password
+          # must fail to render, not silently fall back to the shared backend's
+          # primary-DB defaults (host "mariadb"/db "openmrs").
+          if err=$(helm template tenant1 helm/openmrs-tenant --set global.tenant.name=tenant1 2>&1); then
+            echo "expected the db guard to reject a tenant with no database configured"; exit 1
+          fi
+          grep -qF 'openmrs-tenant: openmrs-backend.db.url' <<<"$err"
+          if err=$(helm template tenant1 helm/openmrs-tenant --set openmrs-backend.db.url=jdbc:x --set openmrs-backend.db.hostname=h --set openmrs-backend.db.username=u --set openmrs-backend.db.password=p 2>&1); then
+            echo "expected the guard to reject a tenant with no global.tenant.name"; exit 1
+          fi
+          grep -qF 'openmrs-tenant: global.tenant.name is required' <<<"$err"
+          # Forward check (Phase 3): when routing IS enabled, the per-tenant spaPath still
+          # reaches the route match and the redirect target, not just the ConfigMap.
+          helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+            --set openmrs-backend.gateway.enabled=true \
+            --set openmrs-frontend.gateway.enabled=true \
+            --set openmrs-frontend.spaPath=/tenant-a/spa \
+            --set openmrs-frontend.rootRedirect.enabled=true > /tmp/tenant-spa.yaml
+          grep -q 'SPA_PATH: "/tenant-a/spa"' /tmp/tenant-spa.yaml
+          grep -q 'value: /tenant-a/spa' /tmp/tenant-spa.yaml
+          grep -q 'replaceFullPath: /tenant-a/spa/home' /tmp/tenant-spa.yaml
+          # Clustered infinispan still renders
+          helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+            --set openmrs-backend.infinispan.clustered=true > /dev/null

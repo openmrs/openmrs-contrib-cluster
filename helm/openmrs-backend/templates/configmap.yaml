@@ -5,14 +5,14 @@ metadata:
   labels:
     {{- include "openmrs-backend.labels" . | nindent 4 }}
 data:
-  {{- if .Values.mariadb.enabled }}
+  {{- if .Values.global.mariadb.enabled }}
   OMRS_DB: "mariadb"
   OMRS_DB_NAME: {{ include "openmrs-backend.dbName" . | quote }}
   OMRS_DB_PORT: "3306"
-  {{- if .Values.mariadb.galera }}
+  {{- if .Values.global.mariadb.galera }}
   OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb"
   OMRS_DB_URL: "jdbc:mariadb:loadbalance://{{ .Release.Name }}-mariadb.{{ .Release.Namespace }}.svc.cluster.local:3306/{{ include "openmrs-backend.dbName" . }}?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"
-  {{- else if gt (int (.Values.mariadb.replicas | default 2)) 1 }}
+  {{- else if gt (int (.Values.global.mariadb.replicas | default 2)) 1 }}
   OMRS_DB_HOSTNAME: "{{ .Release.Name }}-mariadb-primary"
   OMRS_DB_URL: "jdbc:mariadb:replication://{{ .Release.Name }}-mariadb-primary.{{ .Release.Namespace }}.svc.cluster.local:3306,{{ .Release.Name }}-mariadb-secondary.{{ .Release.Namespace }}.svc.cluster.local:3306/{{ include "openmrs-backend.dbName" . }}?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"
   {{- else }}
@@ -22,6 +22,13 @@ data:
   {{- else }}
   {{- if .Values.db.url }}
   OMRS_DB_URL: {{ .Values.db.url | quote }}
+  {{- if regexMatch "^jdbc:mariadb" .Values.db.url }}
+  OMRS_DB: "mariadb"
+  {{- end }}
+  OMRS_DB_HOSTNAME: {{ required "openmrs-backend: db.hostname is required alongside db.url, since the image's startup preflight gates on OMRS_DB_HOSTNAME:OMRS_DB_PORT and falls back to localhost:3306" .Values.db.hostname | quote }}
+  {{- if .Values.db.port }}
+  OMRS_DB_PORT: {{ .Values.db.port | quote }}
+  {{- end }}
   {{- else }}
   OMRS_DB_NAME: {{ include "openmrs-backend.dbName" . | quote }}
   OMRS_DB_HOSTNAME: {{ .Values.db.hostname | quote }}
