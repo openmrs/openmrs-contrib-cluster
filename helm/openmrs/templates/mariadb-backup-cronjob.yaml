@@ -47,6 +47,7 @@ spec:
                 - /bin/sh
                 - -c
                 - |
+                  set -e
                   echo "Starting MariaDB dump..."
                   MYSQL_PWD="${MARIADB_ROOT_PASSWORD}" mysqldump \
                     -h {{ default (printf "%s-mariadb-primary" .Release.Name) .Values.backup.mariadbBackup.mariadbHost }} \
@@ -65,10 +66,10 @@ spec:
                 - secretRef:
                     name: {{ .Release.Name }}-mariadb-backup-credentials
               command:
-                command:
                 - /bin/sh
                 - -c
                 - |
+                  set -e
                   echo "Uploading dump to S3..."
                   ENDPOINT_ARG=""
                   {{- if .Values.backup.mariadbBackup.s3Endpoint }}

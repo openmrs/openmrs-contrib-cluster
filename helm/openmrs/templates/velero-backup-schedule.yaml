@@ -61,7 +61,7 @@ spec:
             - {{ .Release.Namespace }}
           labelSelector:
             matchLabels:
-              app.kubernetes.io/name: elasticsearch
+              common.k8s.elastic.co/type: elasticsearch
           pre:
             - exec:
                 container: elasticsearch
