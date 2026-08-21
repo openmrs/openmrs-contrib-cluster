@@ -11,6 +11,25 @@ global:
   mariadb:
     enabled: false
 
+# dbBootstrap provisions the tenant database/user/grants on the shared MariaDB
+# via the MariaDB operator's Database/User/Grant CRs — the root password never
+# leaves the operator. Disable for manual CREATE DATABASE/USER/GRANT.
+dbBootstrap:
+  enabled: true
+  # The shared MariaDB CR to provision on (from the primary openmrs chart).
+  mariaDbRef:
+    name: openmrs-mariadb
+    namespace: openmrs
+  # Database name override; default openmrs_<tenant> (hyphens → underscores).
+  # Must contain openmrs_<tenant> and be the database openmrs-backend.db.url
+  # connects to — the chart rejects either at render time.
+  database: ""
+  # Per-tenant connection limit on the shared MariaDB.
+  maxUserConnections: 20
+  # DB/user fate on helm uninstall: Skip keeps them, Delete drops them (the
+  # operator's own default is Delete — hence the safe Skip default).
+  cleanupPolicy: Skip
+
 openmrs-backend:
   # Off until routing is wired in: the shared chart's route has no hostname and
   # would collide on the shared gateway.
@@ -27,6 +46,8 @@ openmrs-backend:
     # point at the same shared MariaDB the JDBC URL connects to.
     hostname: ""   # e.g. <primary-release>-mariadb.<primary-namespace>.svc.cluster.local
     port: 3306
+    # Must be exactly openmrs_<tenant> + "_user" (hyphens → underscores) while
+    # dbBootstrap.enabled=true; the chart rejects anything else at render time.
     username: ""
     password: ""
 

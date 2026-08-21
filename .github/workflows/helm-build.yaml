@@ -135,7 +135,7 @@ jobs:
           TENANT_VALUES="--set global.tenant.name=tenant1 \
             --set openmrs-backend.db.url=jdbc:mariadb:loadbalance://mariadb.example.svc.cluster.local:3306/openmrs_tenant1?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true \
             --set openmrs-backend.db.hostname=mariadb.example.svc.cluster.local \
-            --set openmrs-backend.db.username=ci_user \
+            --set openmrs-backend.db.username=openmrs_tenant1_user \
             --set openmrs-backend.db.password=ci-pass"
           helm lint helm/openmrs-tenant $TENANT_VALUES
           helm template tenant1 helm/openmrs-tenant $TENANT_VALUES > /tmp/tenant.yaml
@@ -144,19 +144,64 @@ jobs:
           grep -q 'OMRS_DB_URL: "jdbc:mariadb:loadbalance://mariadb.example.svc.cluster.local:3306/openmrs_tenant1?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true"' /tmp/tenant.yaml
           grep -q 'OMRS_DB_HOSTNAME: "mariadb.example.svc.cluster.local"' /tmp/tenant.yaml
           grep -q 'SPA_PATH: "/openmrs/spa"' /tmp/tenant.yaml
-          [ "$(grep -c 'app.kubernetes.io/tenant: "tenant1"' /tmp/tenant.yaml)" -eq 2 ]
+          # Backend and frontend pod templates (at least) carry the tenant label.
+          [ "$(grep -c 'app.kubernetes.io/tenant: "tenant1"' /tmp/tenant.yaml)" -ge 6 ]
           if grep -q 'storageClassName: ""' /tmp/tenant.yaml; then
             echo "empty storageClassName means no-class (PVC stays Pending); it must be omitted"; exit 1
           fi
-          # Phase-1 invariant: tenant routing is deferred to Phase 3 (TRUNK-6654), so the
-          # shared charts' HTTPRoutes are disabled by default — a host-less route would
-          # collide with the primary and other tenants on the shared gateway.
+          # Phase-1 invariant: HTTPRoutes stay off (host-less routes would collide
+          # on the shared gateway) until Phase 3 (TRUNK-6654).
           if grep -q 'kind: HTTPRoute' /tmp/tenant.yaml; then
             echo "expected NO HTTPRoutes in the default tenant render (gateway must stay off until Phase 3)"; exit 1
           fi
-          # DB connection is required: a tenant without db.url/hostname/username/password
-          # must fail to render, not silently fall back to the shared backend's
-          # primary-DB defaults (host "mariadb"/db "openmrs").
+          # Phase 2: operator Database/User/Grant CRs + credential Secret render,
+          # DB defaults to openmrs_<tenant>.
+          grep -q 'kind: Database' /tmp/tenant.yaml
+          grep -q 'kind: User' /tmp/tenant.yaml
+          grep -q 'kind: Grant' /tmp/tenant.yaml
+          grep -q 'name: tenant1-db-credentials' /tmp/tenant.yaml
+          grep -q 'k8s.mariadb.com/watch: ""' /tmp/tenant.yaml
+          grep -q 'mariaDbRef:' /tmp/tenant.yaml
+          grep -q 'name: "openmrs-mariadb"' /tmp/tenant.yaml
+          grep -q 'namespace: "openmrs"' /tmp/tenant.yaml
+          grep -q 'name: "openmrs_tenant1"' /tmp/tenant.yaml
+          grep -q 'maxUserConnections: 20' /tmp/tenant.yaml
+          [ "$(grep -c 'cleanupPolicy: "Skip"' /tmp/tenant.yaml)" -eq 3 ]
+          grep -q 'characterSet: utf8mb4' /tmp/tenant.yaml
+          grep -q 'collate: utf8mb4_general_ci' /tmp/tenant.yaml
+          # Hyphenated tenants normalize to '_' in the DB name (JDBC URL convention).
+          helm template east-coast helm/openmrs-tenant \
+            --set global.tenant.name=east-coast \
+            --set openmrs-backend.db.url=jdbc:mariadb:loadbalance://mariadb.example:3306/openmrs_east_coast \
+            --set openmrs-backend.db.hostname=mariadb.example \
+            --set openmrs-backend.db.username=openmrs_east_coast_user \
+            --set openmrs-backend.db.password=ec-pass > /tmp/tenant-hyphen.yaml
+          grep -q 'name: "openmrs_east_coast"' /tmp/tenant-hyphen.yaml
+          # Grant database must escape _ (SQL LIKE wildcard) to prevent cross-tenant access.
+          # The YAML file contains double backslashes (\\_) because | quote escapes \.
+          grep -q 'database: "openmrs\\\\_east\\\\_coast"' /tmp/tenant-hyphen.yaml
+          # All-digit tenant name: toString prevents int64 render errors.
+          helm template num1 helm/openmrs-tenant $TENANT_VALUES \
+            --set global.tenant.name=12345 \
+            --set openmrs-backend.db.username=openmrs_12345_user \
+            --set openmrs-backend.db.url=jdbc:mariadb:loadbalance://mariadb.example:3306/openmrs_12345 > /tmp/tenant-digit.yaml
+          grep -q 'name: "openmrs_12345"' /tmp/tenant-digit.yaml
+          grep -q 'app.kubernetes.io/tenant: "12345"' /tmp/tenant-digit.yaml
+          # dbBootstrap.database override: custom name must appear in CRs and match the URL.
+          helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+            --set dbBootstrap.database=openmrs_tenant1_custom \
+            --set "openmrs-backend.db.url=jdbc:mariadb:loadbalance://mariadb.example.svc.cluster.local:3306/openmrs_tenant1_custom?autoReconnect=true" > /tmp/tenant-override.yaml
+          grep -q 'name: "openmrs_tenant1_custom"' /tmp/tenant-override.yaml
+          # Drift guard: override must still match the URL's database.
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set dbBootstrap.database=openmrs_tenant1_custom 2>&1); then
+            echo "expected the guard to reject a dbBootstrap.database override that differs from the URL's database"; exit 1
+          fi
+          grep -qF 'openmrs-tenant: openmrs-backend.db.url must target the same database' <<<"$err"
+          # A '/' inside the JDBC properties must not be read as the database segment.
+          helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+            --set "openmrs-backend.db.url=jdbc:mariadb:loadbalance://mariadb.example.svc.cluster.local:3306/openmrs_tenant1?useSsl=true&serverSslCert=/etc/ssl/certs/mariadb-ca.pem" > /dev/null
+          # Without these the backend silently falls back to the primary DB defaults.
           if err=$(helm template tenant1 helm/openmrs-tenant --set global.tenant.name=tenant1 2>&1); then
             echo "expected the db guard to reject a tenant with no database configured"; exit 1
           fi
@@ -165,6 +210,102 @@ jobs:
             echo "expected the guard to reject a tenant with no global.tenant.name"; exit 1
           fi
           grep -qF 'openmrs-tenant: global.tenant.name is required' <<<"$err"
+          # Tenant name must not contain _ — both - and _ normalize to _, so
+          # east-coast and east_coast would collide on the same MariaDB account.
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set global.tenant.name=east_coast 2>&1); then
+            echo "expected the guard to reject a tenant name containing underscores"; exit 1
+          fi
+          grep -qF 'global.tenant.name must not contain underscores' <<<"$err"
+          # Tenant-scoping guard: username must be exactly openmrs_<tenant>_user.
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set openmrs-backend.db.username=openmrs 2>&1); then
+            echo "expected the guard to reject a username that is not exactly openmrs_<tenant>_user"; exit 1
+          fi
+          grep -qF 'openmrs-backend.db.username' <<<"$err"
+          # A tenant whose name is a prefix of another's must not reach that tenant's account.
+          if err=$(helm template east helm/openmrs-tenant \
+              --set global.tenant.name=east \
+              --set openmrs-backend.db.url=jdbc:mariadb:loadbalance://mariadb.example:3306/openmrs_east \
+              --set openmrs-backend.db.hostname=mariadb.example \
+              --set openmrs-backend.db.username=openmrs_east_coast_user \
+              --set openmrs-backend.db.password=ec-pass 2>&1); then
+            echo "expected the guard to reject another tenant's user"; exit 1
+          fi
+          grep -qF 'must be exactly openmrs_east_user' <<<"$err"
+          # Tenant-scoping guard: database must contain the tenant name. The URL
+          # agrees with the override here, so only the tenant-scoping guard can
+          # be what rejects it.
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set dbBootstrap.database=openmrs \
+              --set "openmrs-backend.db.url=jdbc:mariadb:loadbalance://mariadb.example.svc.cluster.local:3306/openmrs?autoReconnect=true" 2>&1); then
+            echo "expected the guard to reject a database name that does not contain the tenant name"; exit 1
+          fi
+          grep -qF 'dbBootstrap.database (openmrs) must contain the tenant name' <<<"$err"
+          # dbBootstrap disabled → no CRs/Secret leak.
+          helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+            --set dbBootstrap.enabled=false > /tmp/tenant-manual.yaml
+          if grep -q 'db-bootstrap' /tmp/tenant-manual.yaml; then
+            echo "expected NO dbBootstrap resources when disabled"; exit 1
+          fi
+          # No imperative bootstrap: no Job, no rootPassword, no SQL or bash
+          # interpolation reaching the database.
+          if grep -qE 'kind: Job|IDENTIFIED BY|CREATE DATABASE|rootPassword|db-bootstrap-job' /tmp/tenant.yaml; then
+            echo "expected NO imperative bootstrap (Job/SQL/rootPassword) in the operator-CRD render"; exit 1
+          fi
+          # Operator CWE-89 (26.6.0): ' and \ in CR-built SQL fields fail render loudly.
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set "openmrs-backend.db.password=O'Brien\$(id)" 2>&1); then
+            echo "expected the dbBootstrap guard to reject a password with a single quote"; exit 1
+          fi
+          grep -qF 'openmrs-backend.db.password must not contain single quotes or backslashes' <<<"$err"
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set 'openmrs-backend.db.password=C:\\windows' 2>&1); then
+            echo "expected the dbBootstrap guard to reject a password with a backslash"; exit 1
+          fi
+          grep -qF 'openmrs-backend.db.password must not contain single quotes or backslashes' <<<"$err"
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set "openmrs-backend.db.username=openmrs_tenant1_user'" 2>&1); then
+            echo "expected the dbBootstrap guard to reject a username with a single quote"; exit 1
+          fi
+          grep -qF 'openmrs-backend.db.username must not contain single quotes or backslashes' <<<"$err"
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set 'openmrs-backend.db.username=openmrs_tenant1\\user' 2>&1); then
+            echo "expected the dbBootstrap guard to reject a username with a backslash"; exit 1
+          fi
+          grep -qF 'openmrs-backend.db.username must not contain single quotes or backslashes' <<<"$err"
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set "dbBootstrap.database=openmrs_tenant1't" 2>&1); then
+            echo "expected the guard to reject a database name with a single quote"; exit 1
+          fi
+          grep -qF 'single quotes, backslashes or backticks' <<<"$err"
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set "dbBootstrap.database=openmrs_tenant1\`db" 2>&1); then
+            echo "expected the dbBootstrap guard to reject a database name with a backtick"; exit 1
+          fi
+          grep -qF 'single quotes, backslashes or backticks' <<<"$err"
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set 'dbBootstrap.database=openmrs_tenant1\\db' 2>&1); then
+            echo "expected the guard to reject a database name with a backslash"; exit 1
+          fi
+          grep -qF 'single quotes, backslashes or backticks' <<<"$err"
+          # The URL's database segment must match the provisioned database — they are the same DB.
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set "openmrs-backend.db.url=jdbc:mariadb:loadbalance://mariadb.example.svc.cluster.local:3306/other_db?autoReconnect=true" 2>&1); then
+            echo "expected the guard to reject a db.url whose database differs from dbBootstrap's"; exit 1
+          fi
+          grep -qF 'openmrs-tenant: openmrs-backend.db.url must target the same database' <<<"$err"
+          # Shell metachars without ' or \ still render.
+          helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+            --set 'openmrs-backend.db.password=O$Brien$(id)' > /tmp/tenant-inject.yaml
+          grep -qF 'password: "O$Brien$(id)"' /tmp/tenant-inject.yaml
+          if grep -qE 'IDENTIFIED BY|CREATE DATABASE|DB_PASS=|mariadb -u' /tmp/tenant-inject.yaml; then
+            echo "expected no shell/SQL interpolation surface in the operator-CRD render"; exit 1
+          fi
+          # All-digit password: quote handles int64 without toString.
+          helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+            --set 'openmrs-backend.db.password=12345' > /tmp/tenant-digit-pw.yaml
+          grep -qF 'password: "12345"' /tmp/tenant-digit-pw.yaml
           # Forward check (Phase 3): when routing IS enabled, the per-tenant spaPath still
           # reaches the route match and the redirect target, not just the ConfigMap.
           helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \

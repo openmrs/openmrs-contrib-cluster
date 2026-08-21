@@ -1,0 +1,16 @@
+{{- if .Values.dbBootstrap.enabled }}
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Database
+metadata:
+  name: {{ .Release.Name }}-db
+  labels:
+    {{- include "openmrs-tenant.labels" . | nindent 4 }}
+spec:
+  mariaDbRef:
+    name: {{ .Values.dbBootstrap.mariaDbRef.name | quote }}
+    namespace: {{ .Values.dbBootstrap.mariaDbRef.namespace | quote }}
+  name: {{ include "openmrs-tenant.dbName" . | quote }}
+  characterSet: utf8mb4
+  collate: utf8mb4_general_ci
+  cleanupPolicy: {{ .Values.dbBootstrap.cleanupPolicy | quote }}
+{{- end }}

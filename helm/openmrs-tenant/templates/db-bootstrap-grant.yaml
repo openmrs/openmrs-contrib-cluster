@@ -1,0 +1,19 @@
+{{- if .Values.dbBootstrap.enabled }}
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Grant
+metadata:
+  name: {{ .Release.Name }}-grant
+  labels:
+    {{- include "openmrs-tenant.labels" . | nindent 4 }}
+spec:
+  mariaDbRef:
+    name: {{ .Values.dbBootstrap.mariaDbRef.name | quote }}
+    namespace: {{ .Values.dbBootstrap.mariaDbRef.namespace | quote }}
+  privileges:
+    - "ALL PRIVILEGES"
+  database: {{ include "openmrs-tenant.dbName" . | replace "_" "\\_" | quote }}
+  table: "*"
+  username: {{ (index .Values "openmrs-backend").db.username | quote }}
+  host: "%"
+  cleanupPolicy: {{ .Values.dbBootstrap.cleanupPolicy | quote }}
+{{- end }}

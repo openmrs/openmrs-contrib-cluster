@@ -1,0 +1,19 @@
+{{- if .Values.dbBootstrap.enabled }}
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: User
+metadata:
+  name: {{ .Release.Name }}-user
+  labels:
+    {{- include "openmrs-tenant.labels" . | nindent 4 }}
+spec:
+  mariaDbRef:
+    name: {{ .Values.dbBootstrap.mariaDbRef.name | quote }}
+    namespace: {{ .Values.dbBootstrap.mariaDbRef.namespace | quote }}
+  name: {{ (index .Values "openmrs-backend").db.username | quote }}
+  passwordSecretKeyRef:
+    name: {{ .Release.Name }}-db-credentials
+    key: password
+  maxUserConnections: {{ .Values.dbBootstrap.maxUserConnections }}
+  host: "%"
+  cleanupPolicy: {{ .Values.dbBootstrap.cleanupPolicy | quote }}
+{{- end }}

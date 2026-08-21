@@ -4,6 +4,19 @@ Tenant: {{ .Values.global.tenant.name }}
 Backend: {{ .Release.Name }}-openmrs-backend.{{ .Release.Namespace }}.svc.cluster.local:8080
 Frontend: {{ .Release.Name }}-openmrs-frontend.{{ .Release.Namespace }}.svc.cluster.local:80
 
+{{- if .Values.dbBootstrap.enabled }}
+Database: the tenant database and user are provisioned on the shared MariaDB
+via the MariaDB operator's Database / User / Grant custom resources (database
+"{{ include "openmrs-tenant.dbName" . }}", user "{{ (index .Values "openmrs-backend").db.username }}")
+— this requires the MariaDB operator (installed cluster-wide by the
+openmrs-operator chart) to be running. Verify with:
+  kubectl get database,user,grant -n {{ .Release.Namespace }}
+{{- else }}
+Database: dbBootstrap is disabled — the tenant database and user must already
+exist on the shared MariaDB (see the README's "Deploy additional tenants"
+section for the manual CREATE DATABASE / CREATE USER / GRANT SQL).
+{{- end }}
+
 To verify the tenant label:
   kubectl get pods -n {{ .Release.Namespace }} -L app.kubernetes.io/tenant
 
