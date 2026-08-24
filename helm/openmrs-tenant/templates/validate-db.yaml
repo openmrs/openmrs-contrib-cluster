@@ -1,7 +1,6 @@
 {{- /*
-Fail fast if the tenant's shared-MariaDB connection isn't fully set. Left empty,
-the shared backend falls back to its own defaults (host "mariadb", db "openmrs"
-— the primary's) with blank creds, renders clean, then fails at runtime.
+Fail fast: without these the shared backend silently falls back to the primary's
+defaults (host "mariadb", db "openmrs") and only fails at runtime.
 */}}
 {{- if not .Values.global.tenant.name -}}
 {{- fail "openmrs-tenant: global.tenant.name is required." -}}
@@ -9,4 +8,37 @@ the shared backend falls back to its own defaults (host "mariadb", db "openmrs"
 {{- $db := (index .Values "openmrs-backend").db | default dict -}}
 {{- if or (not $db.url) (not $db.hostname) (not $db.username) (not $db.password) -}}
 {{- fail "openmrs-tenant: openmrs-backend.db.url, .hostname, .username and .password are all required. See the README's \"Deploy additional tenants\" section." -}}
+{{- end -}}
+{{- if .Values.dbBootstrap.enabled -}}
+{{- /*
+Why the guard: the MariaDB operator (26.6.0) builds SQL from CR fields without
+escaping ' or \, so those chars would leave a User/Grant CR stuck in Error.
+CRD presence can't be checked at render time (helm template runs without a
+cluster), so a missing operator is a documented README prerequisite.
+*/}}
+{{- if contains "_" (.Values.global.tenant.name | toString) -}}
+{{- fail "openmrs-tenant: global.tenant.name must not contain underscores while dbBootstrap.enabled=true — both - and _ normalize to _ in the database/user names, so tenants east-coast and east_coast would collide on the same MariaDB account. Use hyphens only or set dbBootstrap.enabled=false." -}}
+{{- end -}}
+{{- $dbName := include "openmrs-tenant.dbName" . -}}
+{{- $normalizedTenant := include "openmrs-tenant.normalizedTenant" . -}}
+{{- if not (contains $normalizedTenant $dbName) -}}
+{{- fail (printf "openmrs-tenant: dbBootstrap.database (%s) must contain the tenant name (%s). Use the default or set dbBootstrap.enabled=false." $dbName $normalizedTenant) -}}
+{{- end -}}
+{{- if or (contains "'" ($db.username | toString)) (contains "\\" ($db.username | toString)) -}}
+{{- fail "openmrs-tenant: openmrs-backend.db.username must not contain single quotes or backslashes while dbBootstrap.enabled=true — the MariaDB operator (upstream CWE-89, unfixed in 26.6.0) cannot safely provision such a user. Change the username or set dbBootstrap.enabled=false and create the user manually." -}}
+{{- end -}}
+{{- if ne ($db.username | toString) (printf "%s_user" $normalizedTenant) -}}
+{{- fail (printf "openmrs-tenant: openmrs-backend.db.username (%s) must be exactly %s_user. Anything looser lets one tenant take over another tenant's MariaDB account. Use the tenant-scoped name or set dbBootstrap.enabled=false." ($db.username | toString) $normalizedTenant) -}}
+{{- end -}}
+{{- if or (contains "'" ($db.password | toString)) (contains "\\" ($db.password | toString)) -}}
+{{- fail "openmrs-tenant: openmrs-backend.db.password must not contain single quotes or backslashes while dbBootstrap.enabled=true — the MariaDB operator (upstream CWE-89, unfixed in 26.6.0) cannot safely provision such a password. Change the password or set dbBootstrap.enabled=false and create the user manually." -}}
+{{- end -}}
+{{- if or (contains "'" $dbName) (contains "\\" $dbName) (contains "`" $dbName) -}}
+{{- fail "openmrs-tenant: the tenant database name (dbBootstrap.database, default openmrs_<tenant>) must not contain single quotes, backslashes or backticks while dbBootstrap.enabled=true — the MariaDB operator (upstream CWE-89, unfixed in 26.6.0) cannot safely provision such a database. Change the tenant name or dbBootstrap.database, or set dbBootstrap.enabled=false." -}}
+{{- end -}}
+{{- /* The URL's database segment must be the very database provisioned below — they are the same database. */ -}}
+{{- $urlDb := last (splitList "/" (first (splitList "?" $db.url))) -}}
+{{- if ne $urlDb $dbName -}}
+{{- fail (printf "openmrs-tenant: openmrs-backend.db.url must target the same database dbBootstrap provisions (%s); the URL's database segment is %s. Fix the JDBC URL or dbBootstrap.database." $dbName $urlDb) -}}
+{{- end -}}
 {{- end -}}

@@ -2,7 +2,7 @@ apiVersion: v2
 name: openmrs-tenant
 description: OpenMRS Tenant Helm chart — minimal backend+frontend for one tenant sharing existing infrastructure
 type: application
-version: 1.0.0
+version: 2.0.0
 appVersion: "3.7.x-no-demo"
 
 dependencies:

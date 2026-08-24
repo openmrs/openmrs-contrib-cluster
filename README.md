@@ -110,16 +110,28 @@ configuration on top of them. Each tenant is a separate Helm release in its own 
 
 - Primary OpenMRS stack deployed and running (steps 1–4 above)
 - MariaDB accessible from tenant namespace (default DNS: `<primary-release>-mariadb.<primary-namespace>.svc.cluster.local`, e.g. `openmrs-mariadb.openmrs.svc.cluster.local`)
-- A database and user created for the tenant:
+- The **MariaDB operator** running **cluster-wide** (installed automatically by step 3's `openmrs-operator` chart; it watches all namespaces and reconciles the `Database` / `User` / `Grant` CRs below)
 
-```bash
-kubectl exec -n openmrs svc/openmrs-mariadb -- mysql -u root -pRoot123 -e "
-  CREATE DATABASE IF NOT EXISTS openmrs_<tenant> CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-  CREATE USER IF NOT EXISTS '<tenant>_user'@'%' IDENTIFIED BY '<password>';
-  GRANT ALL PRIVILEGES ON openmrs_<tenant>.* TO '<tenant>_user'@'%';
-  FLUSH PRIVILEGES;
-"
-```
+The tenant's database and user are **created automatically**: the tenant chart renders the
+MariaDB operator's `Database` / `User` / `Grant` custom resources (in the tenant namespace,
+referencing the shared MariaDB via `mariaDbRef`). The operator turns them into
+`CREATE DATABASE` / `CREATE USER` / `GRANT` / `ALTER USER ... WITH MAX_USER_CONNECTIONS`
+declaratively — no imperative bootstrap Job runs, and the shared MariaDB's **root password
+never enters the tenant namespaces** (it stays inside the operator). Nothing to do by hand.
+
+> **Manual fallback:** with `--set dbBootstrap.enabled=false` the CRs are not
+> rendered and you must create the database and user yourself, e.g.:
+>
+> ```bash
+> # _ is a LIKE wildcard in GRANT; escape each _ as \_ and wrap in backticks.
+> # A quoted heredoc ('SQL') keeps backticks intact through the local shell.
+> kubectl exec -i -n openmrs svc/openmrs-mariadb -- mysql -u root -pRoot123 <<'SQL'
+>   CREATE DATABASE IF NOT EXISTS openmrs_east_coast CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+>   CREATE USER IF NOT EXISTS 'openmrs_east_coast_user'@'%' IDENTIFIED BY '<password>';
+>   GRANT ALL PRIVILEGES ON `openmrs\_east\_coast`.* TO 'openmrs_east_coast_user'@'%';
+>   FLUSH PRIVILEGES;
+> SQL
+> ```
 
 #### Install a tenant
 
@@ -140,9 +152,33 @@ helm install <tenant> helm/openmrs-tenant \
   --set openmrs-backend.db.url="jdbc:mariadb:loadbalance://<primary-release>-mariadb.<primary-namespace>.svc.cluster.local:3306/openmrs_<tenant>?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true" \
   --set openmrs-backend.db.hostname=<primary-release>-mariadb.<primary-namespace>.svc.cluster.local \
   --set openmrs-backend.db.port=3306 \
-  --set openmrs-backend.db.username=<tenant>_user \
-  --set openmrs-backend.db.password=<password>
+  --set openmrs-backend.db.username=openmrs_<tenant>_user \
+  --set openmrs-backend.db.password=<password> \
+  --set dbBootstrap.mariaDbRef.name=<primary-release>-mariadb \
+  --set dbBootstrap.mariaDbRef.namespace=<primary-namespace>
 ```
+
+> **Hyphenated tenant names:** the database defaults to `openmrs_<tenant>` with
+> any `-` in the tenant name replaced by `_` (JDBC URL convention). For example,
+> `global.tenant.name=east-coast` provisions `openmrs_east_coast`, so use
+> `.../openmrs_east_coast?...` in the JDBC URL, not `openmrs_east-coast`.
+> **Do not use `_` in tenant names** — both `-` and `_` normalize to `_`, so
+> `east-coast` and `east_coast` would collide on the same MariaDB account.
+
+The chart renders the MariaDB operator's `Database` / `User` / `Grant` CRs, which
+auto-provision the tenant database `openmrs_<tenant>` (override via
+`dbBootstrap.database`), the `openmrs_<tenant>_user` user, and its grants — the password is
+taken from `openmrs-backend.db.password` (matching the backend's own Secret). The CRs
+target the shared MariaDB via `dbBootstrap.mariaDbRef` (defaults to the primary chart's
+`openmrs-mariadb` CR in the `openmrs` namespace). Set `--set dbBootstrap.enabled=false`
+to skip bootstrapping and manage the database manually (see above).
+
+> **Known operator limitation:** the MariaDB operator (26.6.0, installed by
+> `openmrs-operator`) has an upstream SQL-injection advisory (CWE-89): it builds SQL
+> without escaping `'` in user/database names or passwords. The tenant chart rejects
+> `'`, `\` and `` ` `` (database name only) while `dbBootstrap.enabled=true` so the install fails
+> loudly instead of leaving a `User`/`Grant` CR stuck in `Error`. Change the value or
+> set `dbBootstrap.enabled=false` and create the user manually.
 
 Example for a tenant named `coast`:
 
@@ -154,7 +190,7 @@ helm install coast helm/openmrs-tenant \
   --set openmrs-backend.db.url="jdbc:mariadb:loadbalance://openmrs-mariadb.openmrs.svc.cluster.local:3306/openmrs_coast?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true" \
   --set openmrs-backend.db.hostname=openmrs-mariadb.openmrs.svc.cluster.local \
   --set openmrs-backend.db.port=3306 \
-  --set openmrs-backend.db.username=coast_user \
+  --set openmrs-backend.db.username=openmrs_coast_user \
   --set openmrs-backend.db.password=CoastPass123
 ```
 
@@ -175,6 +211,9 @@ kubectl get pods -n tenant-<tenant> -L app.kubernetes.io/tenant
 
 # Wait for ready
 kubectl wait --for=condition=ready pod -n tenant-<tenant> --all --timeout=600s
+
+# Check the MariaDB operator reconciled the tenant's CRs (Database/User/Grant ready)
+kubectl get database,user,grant -n tenant-<tenant>
 
 # Port-forward to backend (API)
 kubectl port-forward -n tenant-<tenant> svc/<tenant>-openmrs-backend 8080:8080
@@ -208,8 +247,14 @@ through. For the full shared-chart surface, see `helm/openmrs-backend/values.yam
 | `openmrs-backend.db.url` | Full JDBC URL to the shared MariaDB | **required** |
 | `openmrs-backend.db.hostname` | Shared MariaDB host, used by the backend's `wait-for-it` preflight (`OMRS_DB_HOSTNAME`) | **required** |
 | `openmrs-backend.db.port` | Shared MariaDB port | `3306` |
-| `openmrs-backend.db.username` | Tenant DB user | **required** |
+| `openmrs-backend.db.username` | Tenant DB user; must be exactly `openmrs_<tenant>_user` when `dbBootstrap.enabled=true` | **required** |
 | `openmrs-backend.db.password` | Tenant DB password | **required** |
+| `dbBootstrap.enabled` | Render the MariaDB operator's `Database` / `User` / `Grant` CRs that auto-provision the tenant's DB/user/grants on the shared MariaDB | `true` |
+| `dbBootstrap.mariaDbRef.name` | Name of the shared MariaDB CR to provision on | `openmrs-mariadb` |
+| `dbBootstrap.mariaDbRef.namespace` | Namespace of the shared MariaDB CR | `openmrs` |
+| `dbBootstrap.database` | Tenant database to provision on the shared MariaDB; default `openmrs_<tenant>` with hyphens normalized to underscores. Must contain `openmrs_<tenant>` and be the database in `openmrs-backend.db.url` — a mismatch or missing tenant name fails at render time | `openmrs_<tenant>` |
+| `dbBootstrap.maxUserConnections` | Per-tenant `MAX_USER_CONNECTIONS` limit on the shared MariaDB | `20` |
+| `dbBootstrap.cleanupPolicy` | Whether the DB/user are dropped on `helm uninstall`: `Skip` (safe default, keeps tenant data) or `Delete` | `Skip` |
 | `openmrs-backend.podLabels` | Extra labels for backend pods | `{}` |
 | `openmrs-frontend.enabled` | Deploy the frontend | `true` |
 | `openmrs-frontend.spaPath` | URL path the SPA is served from (`SPA_PATH`) | `"/openmrs/spa"` |
