@@ -42,3 +42,25 @@ cluster), so a missing operator is a documented README prerequisite.
 {{- fail (printf "openmrs-tenant: openmrs-backend.db.url must target the same database dbBootstrap provisions (%s); the URL's database segment is %s. Fix the JDBC URL or dbBootstrap.database." $dbName $urlDb) -}}
 {{- end -}}
 {{- end -}}
+{{- /* Phase 3: routing guard — host-scoped HTTPRoutes must not collide. */ -}}
+{{- $beGw := (index .Values "openmrs-backend").gateway | default dict -}}
+{{- $feGw := (index .Values "openmrs-frontend").gateway | default dict -}}
+{{- if and (dig "enabled" false $beGw) (not (dig "hostnames" nil $beGw)) -}}
+{{- fail "openmrs-tenant: openmrs-backend.gateway.enabled=true requires openmrs-backend.gateway.hostnames to be set — a hostless HTTPRoute would collide on the shared gateway." -}}
+{{- end -}}
+{{- if and (dig "enabled" false $feGw) (not (dig "hostnames" nil $feGw)) -}}
+{{- fail "openmrs-tenant: openmrs-frontend.gateway.enabled=true requires openmrs-frontend.gateway.hostnames to be set — a hostless HTTPRoute would collide on the shared gateway." -}}
+{{- end -}}
+{{- /* The SPA calls the API same-origin while apiUrl is a relative path, so every host that
+       serves the tenant SPA must also route /openmrs/ to this tenant's backend. Otherwise
+       those calls fall through the primary umbrella's hostless route to the primary DB. */ -}}
+{{- $apiUrl := (index .Values "openmrs-frontend").apiUrl | default "" -}}
+{{- $absoluteApi := or (hasPrefix "http://" $apiUrl) (hasPrefix "https://" $apiUrl) (hasPrefix "//" $apiUrl) -}}
+{{- if and (dig "enabled" false $feGw) (not $absoluteApi) -}}
+{{- $beHosts := ternary (dig "hostnames" list $beGw) list (dig "enabled" false $beGw) -}}
+{{- range $h := (dig "hostnames" list $feGw) -}}
+{{- if not (has $h $beHosts) -}}
+{{- fail (printf "openmrs-tenant: %s serves the tenant SPA but openmrs-backend.gateway does not route it, so the SPA's relative apiUrl (%s) would reach the primary backend instead. Add %s to openmrs-backend.gateway.hostnames with openmrs-backend.gateway.enabled=true, or set an absolute openmrs-frontend.apiUrl." $h $apiUrl $h) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}

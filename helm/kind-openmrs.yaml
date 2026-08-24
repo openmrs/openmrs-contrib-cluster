@@ -44,6 +44,8 @@ openmrs-frontend:
       namespace: openmrs-system
   rootRedirect:
     enabled: true
+    hostnames:
+      - localhost
   image:
     repository: openmrs/openmrs-reference-application-3-frontend
     tag: 3.7.x

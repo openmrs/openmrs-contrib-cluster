@@ -149,10 +149,10 @@ jobs:
           if grep -q 'storageClassName: ""' /tmp/tenant.yaml; then
             echo "empty storageClassName means no-class (PVC stays Pending); it must be omitted"; exit 1
           fi
-          # Phase-1 invariant: HTTPRoutes stay off (host-less routes would collide
-          # on the shared gateway) until Phase 3 (TRUNK-6654).
+          # Default render: HTTPRoutes stay off (gateway.enabled=false by default
+          # in the tenant chart, so hostless routes would collide on the shared gateway).
           if grep -q 'kind: HTTPRoute' /tmp/tenant.yaml; then
-            echo "expected NO HTTPRoutes in the default tenant render (gateway must stay off until Phase 3)"; exit 1
+            echo "expected NO HTTPRoutes in the default tenant render (gateway must stay off by default)"; exit 1
           fi
           # Phase 2: operator Database/User/Grant CRs + credential Secret render,
           # DB defaults to openmrs_<tenant>.
@@ -310,12 +310,156 @@ jobs:
           # reaches the route match and the redirect target, not just the ConfigMap.
           helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
             --set openmrs-backend.gateway.enabled=true \
+            --set "openmrs-backend.gateway.hostnames[0]=tenant1.example.com" \
             --set openmrs-frontend.gateway.enabled=true \
+            --set "openmrs-frontend.gateway.hostnames[0]=tenant1.example.com" \
             --set openmrs-frontend.spaPath=/tenant-a/spa \
-            --set openmrs-frontend.rootRedirect.enabled=true > /tmp/tenant-spa.yaml
-          grep -q 'SPA_PATH: "/tenant-a/spa"' /tmp/tenant-spa.yaml
-          grep -q 'value: /tenant-a/spa' /tmp/tenant-spa.yaml
-          grep -q 'replaceFullPath: /tenant-a/spa/home' /tmp/tenant-spa.yaml
+            --set openmrs-frontend.rootRedirect.enabled=true > /tmp/tenant-routing.yaml
+          grep -q 'SPA_PATH: "/tenant-a/spa"' /tmp/tenant-routing.yaml
+          grep -q 'value: /tenant-a/spa' /tmp/tenant-routing.yaml
+          grep -q 'replaceFullPath: /tenant-a/spa/home' /tmp/tenant-routing.yaml
+          grep -q 'tenant1.example.com' /tmp/tenant-routing.yaml
+          grep -q 'kind: HTTPRoute' /tmp/tenant-routing.yaml
           # Clustered infinispan still renders
           helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
             --set openmrs-backend.infinispan.clustered=true > /dev/null
+
+      - name: Validate routing guard (enabled without hostnames rejected)
+        run: |
+          TENANT_VALUES="--set global.tenant.name=tenant1 \
+            --set openmrs-backend.db.url=jdbc:mariadb:loadbalance://mariadb.example.svc.cluster.local:3306/openmrs_tenant1?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true \
+            --set openmrs-backend.db.hostname=mariadb.example.svc.cluster.local \
+            --set openmrs-backend.db.username=openmrs_tenant1_user \
+            --set openmrs-backend.db.password=ci-pass"
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set openmrs-backend.gateway.enabled=true 2>&1); then
+            echo "expected the routing guard to reject backend gateway.enabled without hostnames"; exit 1
+          fi
+          grep -qF 'openmrs-backend.gateway.hostnames' <<<"$err"
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set openmrs-frontend.gateway.enabled=true 2>&1); then
+            echo "expected the routing guard to reject frontend gateway.enabled without hostnames"; exit 1
+          fi
+          grep -qF 'openmrs-frontend.gateway.hostnames' <<<"$err"
+          # Frontend-only with default relative apiUrl must be rejected — the SPA
+          # would hit the primary backend's catch-all route.
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set openmrs-frontend.gateway.enabled=true \
+              --set "openmrs-frontend.gateway.hostnames[0]=tenant1.example.com" 2>&1); then
+            echo "expected the guard to reject frontend-only routing with relative apiUrl"; exit 1
+          fi
+          grep -qF 'openmrs-backend.gateway does not route it' <<<"$err"
+          # Empty apiUrl is also relative (no scheme), must be rejected.
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set openmrs-frontend.gateway.enabled=true \
+              --set "openmrs-frontend.gateway.hostnames[0]=tenant1.example.com" \
+              --set openmrs-frontend.apiUrl="" 2>&1); then
+            echo "expected the guard to reject empty apiUrl with frontend routing"; exit 1
+          fi
+          grep -qF 'openmrs-backend.gateway does not route it' <<<"$err"
+          # Dot-relative apiUrl must be rejected.
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set openmrs-frontend.gateway.enabled=true \
+              --set "openmrs-frontend.gateway.hostnames[0]=tenant1.example.com" \
+              --set openmrs-frontend.apiUrl=./openmrs 2>&1); then
+            echo "expected the guard to reject dot-relative apiUrl with frontend routing"; exit 1
+          fi
+          grep -qF 'openmrs-backend.gateway does not route it' <<<"$err"
+          # Mismatched hostnames: frontend on cosat.example.com, backend on coast.example.com.
+          if err=$(helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+              --set openmrs-backend.gateway.enabled=true \
+              --set "openmrs-backend.gateway.hostnames[0]=coast.example.com" \
+              --set openmrs-frontend.gateway.enabled=true \
+              --set "openmrs-frontend.gateway.hostnames[0]=cosat.example.com" 2>&1); then
+            echo "expected the guard to reject mismatched hostnames"; exit 1
+          fi
+          grep -qF 'cosat.example.com serves the tenant SPA' <<<"$err"
+          # Backend-only (API-only tenant) must still render.
+          # NOTE: on this host, /openmrs/spa falls through to the primary's catch-all
+          # route — Traefik's priority math gives the hostless route precedence over
+          # the tenant's backend-only route for the SPA path. This is expected: an
+          # API-only tenant has no frontend to serve.
+          helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+            --set openmrs-backend.gateway.enabled=true \
+            --set "openmrs-backend.gateway.hostnames[0]=tenant1.example.com" > /dev/null
+          # Frontend with absolute apiUrl must bypass the hostname check.
+          helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+            --set openmrs-backend.gateway.enabled=true \
+            --set "openmrs-backend.gateway.hostnames[0]=tenant1.example.com" \
+            --set openmrs-frontend.gateway.enabled=true \
+            --set "openmrs-frontend.gateway.hostnames[0]=tenant1.example.com" \
+            --set openmrs-frontend.apiUrl=https://api.example.com > /dev/null
+          # Host-absolute apiUrl (//api.example.com) must also bypass the check.
+          helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+            --set openmrs-backend.gateway.enabled=true \
+            --set "openmrs-backend.gateway.hostnames[0]=tenant1.example.com" \
+            --set openmrs-frontend.gateway.enabled=true \
+            --set "openmrs-frontend.gateway.hostnames[0]=tenant1.example.com" \
+            --set openmrs-frontend.apiUrl=//api.example.com > /dev/null
+
+      - name: Validate primary render unchanged (no hostnames on routes)
+        run: |
+          helm template helm/openmrs --generate-name \
+            --set monitoring.enabled=false \
+            --set elasticsearch.enabled=false \
+            --set seaweedfs.enabled=false > /tmp/primary.yaml
+          grep -q 'kind: HTTPRoute' /tmp/primary.yaml
+          if grep -q 'coast.example.com\|nyanza.example.com' /tmp/primary.yaml; then
+            echo "primary render must not contain tenant hostnames"; exit 1
+          fi
+          # The primary backend/frontend routes must stay hostless (catch-all).
+          # The root-redirect route legitimately carries a hostname, so scope this
+          # to the two catch-all templates rather than the whole render.
+          # Capture output first so a helm error (e.g. renamed template) fails
+          # the step under bash -e instead of silently passing via grep on empty.
+          out=$(helm template helm/openmrs --generate-name \
+              --set monitoring.enabled=false \
+              --set elasticsearch.enabled=false \
+              --set seaweedfs.enabled=false \
+              --show-only charts/openmrs-backend/templates/httproute.yaml \
+              --show-only charts/openmrs-frontend/templates/httproute.yaml)
+          if grep -q 'hostnames:' <<<"$out"; then
+            echo "primary HTTPRoutes must not have hostnames (catch-all)"; exit 1
+          fi
+
+      - name: Validate root-redirect hostname fallback and merge
+        run: |
+          TENANT_VALUES="--set global.tenant.name=tenant1 \
+            --set openmrs-backend.db.url=jdbc:mariadb:loadbalance://mariadb.example.svc.cluster.local:3306/openmrs_tenant1?autoReconnect=true&sessionVariables=default_storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8&useMysqlMetadata=true \
+            --set openmrs-backend.db.hostname=mariadb.example.svc.cluster.local \
+            --set openmrs-backend.db.username=openmrs_tenant1_user \
+            --set openmrs-backend.db.password=ci-pass"
+          # Case 1: rootRedirect.hostnames empty, gateway.hostnames set → fallback
+          helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+            --set openmrs-backend.gateway.enabled=true \
+            --set "openmrs-backend.gateway.hostnames[0]=tenant1.example.com" \
+            --set openmrs-frontend.gateway.enabled=true \
+            --set "openmrs-frontend.gateway.hostnames[0]=tenant1.example.com" \
+            --set openmrs-frontend.rootRedirect.enabled=true > /tmp/tenant-fallback.yaml
+          # root-redirect-httproute should inherit gateway.hostnames
+          grep -A20 'root-redirect' /tmp/tenant-fallback.yaml | grep -q 'tenant1.example.com'
+          # ...and nothing else: if the shared frontend chart ever defaults
+          # rootRedirect.hostnames back to [localhost], every tenant's route would
+          # claim localhost too and the check above would still pass.
+          if grep -A20 'root-redirect' /tmp/tenant-fallback.yaml | grep -q 'localhost'; then
+            echo "tenant root-redirect must not inherit a localhost default from the shared chart"; exit 1
+          fi
+          # Case 2: both rootRedirect.hostnames and gateway.hostnames set → merge (dedup)
+          helm template tenant1 helm/openmrs-tenant $TENANT_VALUES \
+            --set openmrs-backend.gateway.enabled=true \
+            --set "openmrs-backend.gateway.hostnames[0]=tenant1.example.com" \
+            --set openmrs-frontend.gateway.enabled=true \
+            --set "openmrs-frontend.gateway.hostnames[0]=tenant1.example.com" \
+            --set openmrs-frontend.rootRedirect.enabled=true \
+            --set "openmrs-frontend.rootRedirect.hostnames[0]=root.example.com" > /tmp/tenant-merge.yaml
+          # root-redirect should have both hostnames (deduplicated)
+          grep -A20 'root-redirect' /tmp/tenant-merge.yaml | grep -q 'root.example.com'
+          grep -A20 'root-redirect' /tmp/tenant-merge.yaml | grep -q 'tenant1.example.com'
+          # Case 3: NOTES.txt uses actual spaPath, not hardcoded /openmrs/spa
+          # helm template does not render NOTES.txt; verify the template directly.
+          grep -q '{{ index $.Values "openmrs-frontend" "spaPath" }}/home' helm/openmrs-tenant/templates/NOTES.txt
+          if grep -q '/openmrs/spa/home' helm/openmrs-tenant/templates/NOTES.txt; then
+            echo "NOTES.txt must not hardcode /openmrs/spa when spaPath is used"; exit 1
+          fi
+
+

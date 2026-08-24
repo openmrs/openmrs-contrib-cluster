@@ -48,6 +48,9 @@ openmrs-backend:
 openmrs-frontend:
   enabled: true
   nameOverride: "frontend"
+  rootRedirect:
+    hostnames:
+      - localhost
 
 # Infra owned by the umbrella (primary deployment). The tenant chart
 # consumes the shared backend/frontend charts only and has none of this.

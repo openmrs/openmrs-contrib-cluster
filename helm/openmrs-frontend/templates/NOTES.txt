@@ -8,4 +8,4 @@ NOTE: In case port-forward command does not work, make sure that OpenMRS Fronten
         kubectl -n {{ .Release.Namespace }} get svc
 
 The OpenMRS Frontend will be available at:
-  http://localhost:8080/openmrs/spa/home
+  http://localhost:8080{{ .Values.spaPath }}/home

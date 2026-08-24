@@ -10,6 +10,10 @@ spec:
   parentRefs:
     - name: {{ .Values.gateway.parentRefs.name }}
       namespace: {{ .Values.gateway.parentRefs.namespace }}
+  {{- with .Values.gateway.hostnames }}
+  hostnames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   rules:
     - matches:
         - path:
