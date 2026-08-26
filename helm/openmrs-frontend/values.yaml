@@ -52,6 +52,7 @@ service:
 
 gateway:
   enabled: true
+  hostnames: []
   path: ""       # defaults to spaPath if unset
   parentRefs:
     name: traefik-gateway
@@ -63,8 +64,7 @@ rootRedirect:
   parentRefs:
     name: traefik-gateway
     namespace: openmrs-system
-  hostnames:
-    - localhost
+  hostnames: []
 
 ingress:
   enabled: false

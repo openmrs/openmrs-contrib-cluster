@@ -10,9 +10,10 @@ spec:
   parentRefs:
     - name: {{ .Values.rootRedirect.parentRefs.name }}
       namespace: {{ .Values.rootRedirect.parentRefs.namespace }}
-  {{- with .Values.rootRedirect.hostnames }}
+  {{- $hosts := concat (.Values.rootRedirect.hostnames | default list) (.Values.gateway.hostnames | default list) | uniq }}
+  {{- if $hosts }}
   hostnames:
-    {{- toYaml . | nindent 4 }}
+    {{- toYaml $hosts | nindent 4 }}
   {{- end }}
   rules:
     - matches:

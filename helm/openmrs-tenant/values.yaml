@@ -7,7 +7,6 @@ global:
   defaultStorageClass: ""
   tenant:
     name: ""
-    hostname: ""
   mariadb:
     enabled: false
 
@@ -31,10 +30,10 @@ dbBootstrap:
   cleanupPolicy: Skip
 
 openmrs-backend:
-  # Off until routing is wired in: the shared chart's route has no hostname and
-  # would collide on the shared gateway.
+  # Off by default; set hostnames alongside enabled.
   gateway:
     enabled: false
+    hostnames: []
 
   # A tenant shares the primary cluster's MariaDB — external DB only, no
   # bundled MariaDB.
@@ -55,9 +54,10 @@ openmrs-backend:
 
 openmrs-frontend:
   enabled: true
-  # Off until routing is wired in
+  # Off by default; set hostnames alongside enabled.
   gateway:
     enabled: false
+    hostnames: []
 
   # Per-tenant SPA configuration. spaPath drives the ConfigMap, the route
   # match, and the root-redirect target, so a per-tenant path override stays

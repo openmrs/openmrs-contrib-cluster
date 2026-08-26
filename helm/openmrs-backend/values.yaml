@@ -89,6 +89,7 @@ service:
 
 gateway:
   enabled: true
+  hostnames: []
   path: /openmrs/
   parentRefs:
     name: traefik-gateway

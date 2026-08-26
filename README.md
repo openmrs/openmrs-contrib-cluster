@@ -191,7 +191,11 @@ helm install coast helm/openmrs-tenant \
   --set openmrs-backend.db.hostname=openmrs-mariadb.openmrs.svc.cluster.local \
   --set openmrs-backend.db.port=3306 \
   --set openmrs-backend.db.username=openmrs_coast_user \
-  --set openmrs-backend.db.password=CoastPass123
+  --set openmrs-backend.db.password=CoastPass123 \
+  --set openmrs-backend.gateway.enabled=true \
+  --set "openmrs-backend.gateway.hostnames[0]=coast.example.com" \
+  --set openmrs-frontend.gateway.enabled=true \
+  --set "openmrs-frontend.gateway.hostnames[0]=coast.example.com"
 ```
 
 > **Naming:** resources are named from the **release name** (the first argument to
@@ -215,23 +219,24 @@ kubectl wait --for=condition=ready pod -n tenant-<tenant> --all --timeout=600s
 # Check the MariaDB operator reconciled the tenant's CRs (Database/User/Grant ready)
 kubectl get database,user,grant -n tenant-<tenant>
 
-# Port-forward to backend (API)
-kubectl port-forward -n tenant-<tenant> svc/<tenant>-openmrs-backend 8080:8080
+# Point the tenant hostname at the gateway (local dev)
+echo "127.0.0.1 coast.example.com" | sudo tee -a /etc/hosts
 
-# Port-forward to frontend (SPA)
-kubectl port-forward -n tenant-<tenant> svc/<tenant>-openmrs-frontend 8081:80
+# Open the SPA in a browser (Traefik binds host port 8080 on the Kind cluster)
+# http://coast.example.com:8080/openmrs/spa/home
+
+# Port-forward to backend (API) for direct access
+kubectl port-forward -n tenant-<tenant> svc/<tenant>-openmrs-backend 8080:8080
 ```
 
-> **Note on routing:** tenant HTTPRoutes are disabled in this chart
-> (`openmrs-backend.gateway.enabled` and `openmrs-frontend.gateway.enabled` default to
-> `false`) — per-tenant routing is deferred to a later phase (TRUNK-6654), since the
-> shared charts' routes carry no hostname and would collide on the shared gateway.
-> Reach the backend API via `kubectl port-forward` as shown. The **frontend SPA UI is
-> not fully usable over port-forward** — the app shell requests its assets under
-> `SPA_PATH` (`/openmrs/spa`), which needs a gateway rewrite (stripping the prefix
-> before nginx) that port-forward cannot provide. Once tenant routing lands, each
-> tenant's frontend and backend will sit behind a per-tenant hostname
-> (e.g. `<tenant>.example.com`), like the primary OpenMRS stack.
+> **Note on routing:** tenant HTTPRoutes are disabled by default (`gateway.enabled=false`).
+> To enable host-based routing, set `openmrs-backend.gateway.enabled=true` and
+> `openmrs-backend.gateway.hostnames` (and likewise for frontend). The shared charts'
+> routes emit hostnames only when `gateway.hostnames` is non-empty, so the primary
+> umbrella's hostless routes act as a catch-all while tenant routes match on specific
+> hostnames — no collisions. Each tenant's frontend and backend sit behind a per-tenant
+> hostname (e.g. `coast.example.com`), like the primary OpenMRS stack. Point that
+> hostname at the gateway (DNS, or an `/etc/hosts` entry) to reach the SPA.
 
 #### Tenant chart parameters
 
@@ -242,7 +247,6 @@ through. For the full shared-chart surface, see `helm/openmrs-backend/values.yam
 | Name | Description | Default |
 |------|-------------|---------|
 | `global.tenant.name` | Tenant identifier; sets the `app.kubernetes.io/tenant` label on backend/frontend pods | **required** |
-| `global.tenant.hostname` | Per-tenant hostname, reserved for future routing | `""` |
 | `global.defaultStorageClass` | StorageClass for tenant PVCs (overrides the shared chart default) | `""` |
 | `openmrs-backend.db.url` | Full JDBC URL to the shared MariaDB | **required** |
 | `openmrs-backend.db.hostname` | Shared MariaDB host, used by the backend's `wait-for-it` preflight (`OMRS_DB_HOSTNAME`) | **required** |
@@ -255,8 +259,12 @@ through. For the full shared-chart surface, see `helm/openmrs-backend/values.yam
 | `dbBootstrap.database` | Tenant database to provision on the shared MariaDB; default `openmrs_<tenant>` with hyphens normalized to underscores. Must contain `openmrs_<tenant>` and be the database in `openmrs-backend.db.url` — a mismatch or missing tenant name fails at render time | `openmrs_<tenant>` |
 | `dbBootstrap.maxUserConnections` | Per-tenant `MAX_USER_CONNECTIONS` limit on the shared MariaDB | `20` |
 | `dbBootstrap.cleanupPolicy` | Whether the DB/user are dropped on `helm uninstall`: `Skip` (safe default, keeps tenant data) or `Delete` | `Skip` |
+| `openmrs-backend.gateway.enabled` | Enable Gateway API HTTPRoute for the backend (requires `gateway.hostnames` set) | `false` |
+| `openmrs-backend.gateway.hostnames` | Hostnames for the backend HTTPRoute; must be non-empty when `gateway.enabled=true` | `[]` |
 | `openmrs-backend.podLabels` | Extra labels for backend pods | `{}` |
 | `openmrs-frontend.enabled` | Deploy the frontend | `true` |
+| `openmrs-frontend.gateway.enabled` | Enable Gateway API HTTPRoute for the frontend (requires `gateway.hostnames` set) | `false` |
+| `openmrs-frontend.gateway.hostnames` | Hostnames for the frontend HTTPRoute; must be non-empty when `gateway.enabled=true` | `[]` |
 | `openmrs-frontend.spaPath` | URL path the SPA is served from (`SPA_PATH`) | `"/openmrs/spa"` |
 | `openmrs-frontend.apiUrl` | SPA → backend API URL (`API_URL`) | `"/openmrs"` |
 | `openmrs-frontend.defaultLocale` | Default UI locale (`SPA_DEFAULT_LOCALE`) | `"en"` |
