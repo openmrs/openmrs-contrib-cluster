@@ -1,4 +1,12 @@
 {{- if and .Values.backup.enabled .Values.backup.mariadbBackup.enabled }}
+{{- $rootSecretName := .Values.backup.mariadbBackup.rootPasswordSecret.name }}
+{{- if not $rootSecretName }}
+{{- if .Values.global.mariadb.enabled }}
+{{- $rootSecretName = printf "%s-mariadb-secret" (include "openmrs.backendFullname" .) }}
+{{- else }}
+{{- fail "backup.mariadbBackup.rootPasswordSecret.name is required when backup.mariadbBackup.enabled=true and global.mariadb.enabled=false — there is no in-chart MariaDB secret to default to" }}
+{{- end }}
+{{- end }}
 # Secret — AWS credentials for the MariaDB backup CronJob
 apiVersion: v1
 kind: Secret
@@ -41,8 +49,8 @@ spec:
                 - name: MARIADB_ROOT_PASSWORD
                   valueFrom:
                     secretKeyRef:
-                      name: {{ .Release.Name }}-backend-mariadb-secret
-                      key: root-password
+                      name: {{ $rootSecretName }}
+                      key: {{ .Values.backup.mariadbBackup.rootPasswordSecret.key | default "root-password" }}
               command:
                 - /bin/sh
                 - -c

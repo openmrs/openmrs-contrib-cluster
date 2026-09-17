@@ -343,6 +343,17 @@ backup:
     # if left empty. Override this if you use nameOverride on the MariaDB sub-chart.
     mariadbHost: ""
 
+    # Secret holding the MariaDB root/admin password used to run mysqldump.
+    # Left empty, this defaults to the umbrella's own MariaDB secret
+    # ({release}-backend-mariadb-secret, key root-password), which only
+    # exists when global.mariadb.enabled=true. Set both when dumping a
+    # MariaDB the chart did not deploy — same case mariadbHost above
+    # anticipates. Required (render fails otherwise) when
+    # global.mariadb.enabled=false.
+    rootPasswordSecret:
+      name: ""
+      key: "root-password"
+
     # AWS credentials for uploading the dump to S3.
     # These will be stored as a Kubernetes secret, never in plain text.
     credentials:

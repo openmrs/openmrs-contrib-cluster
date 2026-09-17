@@ -360,6 +360,7 @@ exists in a tenant chart consuming the shared `openmrs-backend`/`openmrs-fronten
 | `backup.mariadbBackup.s3ForcePathStyle`                        | Set `true` for S3-compatible endpoints (adds `--no-sign-request` to the upload)                    | `false`           |
 | `backup.mariadbBackup.s3Endpoint`                              | S3-compatible endpoint URL (MinIO, SeaweedFS, etc). Leave empty for AWS S3                          | `""`              |
 | `backup.mariadbBackup.mariadbHost`                             | MariaDB primary host to dump from. Empty defaults to `{release}-mariadb-primary`                    | `""`              |
+| `backup.mariadbBackup.rootPasswordSecret.name` / `.key`        | Secret/key holding the MariaDB root password used to run `mysqldump`. Empty name defaults to the umbrella's own MariaDB secret, which only exists when `global.mariadb.enabled=true` — **required** (render fails) when `global.mariadb.enabled=false`, same external-DB case `mariadbHost` above anticipates | `""` / `"root-password"` |
 | `backup.mariadbBackup.credentials.accessKey` / `.secretKey`    | AWS credentials for uploading the dump to S3, stored as a Secret                                    | `""` / `""`       |
 
 See [MariaDB Operator](https://github.com/mariadb-operator/mariadb-operator) for MariaDB CRD parameters.
