@@ -1,0 +1,98 @@
+{{- if and .Values.backup.enabled .Values.backup.restore.enabled }}
+# ClusterRole — gives the restore checker permission to list and create Restores
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-scheduled-restore
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["velero.io"]
+    resources: ["restores"]
+    verbs: ["get", "list", "create"]
+---
+# ClusterRoleBinding — connects the permission above to our service account 
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Name }}-scheduled-restore
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Name }}-scheduled-restore
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-scheduled-restore
+    namespace: {{ .Release.Namespace }}
+---
+# ServiceAccount — the identity that the restore checker runs 
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name }}-scheduled-restore
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+---
+# CronJob — unconditional scheduled restore from the latest completed backup
+# produced by this release's daily-backup Schedule (Velero picks the backup).
+# WARNING: This restores the entire namespace from the latest backup on every scheduled run.
+# It does NOT check whether the cluster is broken first.
+# Enable this only for demo environments where a daily reset to a known state is desired.
+# For production, use manual restore via Velero CLI instead.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-scheduled-restore
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openmrs.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.restore.schedule | quote }}
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: {{ .Release.Name }}-scheduled-restore
+          restartPolicy: OnFailure
+          containers:
+            - name: scheduled-restore
+              image: {{ .Values.backup.restore.image | default "registry.k8s.io/kubectl:v1.30.14" }}
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "=== OpenMRS Scheduled Restore $(date) ==="
+                  VELERO_NAMESPACE={{ .Values.backup.veleroNamespace }}
+                  APP_NAMESPACE={{ .Release.Namespace }}
+
+                  # Skip if a restore is already running
+                  ACTIVE=$(kubectl get restore.velero.io \
+                    -n "$VELERO_NAMESPACE" \
+                    --no-headers 2>/dev/null | \
+                    grep -cE 'InProgress' || true)
+
+                  if [ "$ACTIVE" -gt 0 ]; then
+                    echo "A restore is already in progress. Skipping."
+                    exit 0
+                  fi
+
+                  set -e
+                  echo "Submitting restore from schedule {{ .Release.Name }}-daily-backup"
+                  cat <<EOF | kubectl apply -f -
+                  apiVersion: velero.io/v1
+                  kind: Restore
+                  metadata:
+                    name: scheduled-restore-$(date +%Y%m%d%H%M)
+                    namespace: $VELERO_NAMESPACE
+                  spec:
+                    scheduleName: {{ .Release.Name }}-daily-backup
+                    includedNamespaces:
+                      - $APP_NAMESPACE
+                    existingResourcePolicy: update
+                  EOF
+                  echo "Restore submitted."
+{{- end }}

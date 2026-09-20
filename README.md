@@ -570,6 +570,28 @@ exists in a tenant chart consuming the shared `openmrs-backend`/`openmrs-fronten
 | `grafana.adminPassword`                                       | Grafana admin password                                                                          | `"Admin123"`      |
 | `grafana.ingress.enabled` / `.hosts`                          | Ingress for Grafana (disabled when using HTTPRoute)                                              | `false` / `["localhost"]` |
 | `grafana.httpRoute.enabled` / `.hostnames` / `.path`          | Gateway API HTTPRoute for Grafana                                                                | `false` / `["localhost"]` / `"/grafana"` |
+| `backup.enabled`                                              | Deploy Velero backup resources (BackupStorageLocation, Schedule) for this namespace. Requires Velero to already be installed on the cluster | `false` |
+| `backup.schedule`                                             | Cron schedule for the daily Velero backup                                                       | `"0 2 * * *"`     |
+| `backup.ttl`                                                  | How long Velero keeps a backup before deleting it                                               | `"720h0m0s"`      |
+| `backup.bucket`                                                | S3 bucket backups are stored in. Required when `backup.enabled=true`                             | `""`              |
+| `backup.region`                                                | AWS region of the S3 bucket                                                                      | `"us-east-1"`     |
+| `backup.s3ForcePathStyle`                                      | Set `true` for S3-compatible endpoints (SeaweedFS, MinIO); leave `false` for AWS S3               | `false`           |
+| `backup.s3Url`                                                 | S3-compatible endpoint URL (e.g. the SeaweedFS S3 service). Leave empty for AWS S3. Also gates whether the bucket-setup Job runs | `""` |
+| `backup.credentials.accessKey` / `.secretKey`                  | AWS credentials for Velero and the bucket-setup Job, stored as a Secret                           | `""` / `""`       |
+| `backup.veleroNamespace`                                       | Namespace Velero is installed in                                                                 | `"velero"`        |
+| `backup.restore.enabled`                                       | Deploy the scheduled restore CronJob. Restores the whole namespace from the latest completed backup on every run — intended for demo environments, not production | `false` |
+| `backup.restore.schedule`                                      | Cron schedule for the scheduled restore                                                          | `"0 3 * * *"`     |
+| `backup.restore.image`                                         | Image used to submit the scheduled Restore via kubectl                                            | `"registry.k8s.io/kubectl:v1.30.14"` |
+| `backup.mariadbBackup.enabled`                                 | Deploy a dedicated CronJob that dumps MariaDB directly to S3, independent of Velero                | `false`           |
+| `backup.mariadbBackup.schedule`                                | Cron schedule for the MariaDB dump                                                                | `"30 1 * * *"`    |
+| `backup.mariadbBackup.image`                                   | Image used to run `mysqldump`. Empty defaults to `mariadb:<mariadb.image.tag>`                     | `""`              |
+| `backup.mariadbBackup.bucket`                                  | S3 bucket the dump is uploaded to. Required when `backup.mariadbBackup.enabled=true`               | `""`              |
+| `backup.mariadbBackup.region`                                  | AWS region of the S3 bucket                                                                        | `"us-east-1"`     |
+| `backup.mariadbBackup.s3ForcePathStyle`                        | Set `true` for S3-compatible endpoints (adds `--no-sign-request` to the upload)                    | `false`           |
+| `backup.mariadbBackup.s3Endpoint`                              | S3-compatible endpoint URL (MinIO, SeaweedFS, etc). Leave empty for AWS S3                          | `""`              |
+| `backup.mariadbBackup.mariadbHost`                             | MariaDB primary host to dump from. Empty defaults to `{release}-mariadb-primary`                    | `""`              |
+| `backup.mariadbBackup.rootPasswordSecret.name` / `.key`        | Secret/key holding the MariaDB root password used to run `mysqldump`. Empty name defaults to the umbrella's own MariaDB secret, which only exists when `global.mariadb.enabled=true` — **required** (render fails) when `global.mariadb.enabled=false`, same external-DB case `mariadbHost` above anticipates | `""` / `"root-password"` |
+| `backup.mariadbBackup.credentials.accessKey` / `.secretKey`    | AWS credentials for uploading the dump to S3, stored as a Secret                                    | `""` / `""`       |
 
 See [MariaDB Operator](https://github.com/mariadb-operator/mariadb-operator) for MariaDB CRD parameters.
 
@@ -630,6 +652,42 @@ The chart creates a pre-install hook Job that creates the `filemeta` table befor
 
 See [SeaweedFS documentation](https://github.com/seaweedfs/seaweedfs/wiki)
 for full details.
+
+#### Prerequisites: Velero (backup and restore)
+
+[Velero](https://velero.io/) must already be installed on the cluster with its
+CRDs registered before setting `backup.enabled=true` — the chart does not deploy
+Velero itself, only the `BackupStorageLocation`/`Schedule` resources that use it.
+`helm/openmrs/templates/velero-crd-check.yaml` fails the install/upgrade with a
+clear error (pointing at the [Velero install docs](https://velero.io/docs/latest/basic-install/))
+if `backup.enabled=true` and the `velero.io/v1/Schedule` CRD isn't present on the
+target cluster. To render the backup templates offline (CI, `helm template`
+without a live `--kube-apiserver`), pass `--api-versions velero.io/v1/Schedule`
+so the check doesn't fail on a rendering environment that has no cluster to ask.
+
+Enabling `backup.enabled=true` deploys, in the release namespace:
+
+- a `BackupStorageLocation` pointing at `backup.bucket` (via `backup.s3Url` for
+  S3-compatible endpoints like the umbrella's own SeaweedFS, or AWS S3 directly)
+- a daily `Schedule` (`backup.schedule`) that backs up the whole namespace, with
+  a pre-backup hook that snapshots Elasticsearch first when
+  `openmrs-backend.elasticsearch.enabled=true`
+- a one-time post-install/post-upgrade Job that creates `backup.bucket` if it
+  doesn't already exist (only when `backup.s3Url` is set, i.e. an S3-compatible
+  endpoint rather than AWS S3)
+
+Two independent, opt-in CronJobs build on top of that:
+
+- `backup.restore.enabled=true` adds a CronJob that submits a Velero `Restore`
+  from the latest completed backup of this release's `Schedule` on
+  `backup.restore.schedule`. It restores the **entire namespace** unconditionally
+  on every run with no check that anything is actually broken — enable this only
+  for demo/ephemeral environments that want a daily reset to a known state, never
+  in production. Use the Velero CLI for a real restore.
+- `backup.mariadbBackup.enabled=true` adds a CronJob that dumps MariaDB directly
+  to S3 (via `mysqldump`) on `backup.mariadbBackup.schedule`, independent of
+  Velero — useful as a lighter-weight, faster-to-restore-from database-only backup
+  alongside (or instead of) the full-namespace Velero backup.
 
 ### Security Notes (Production)
 
